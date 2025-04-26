@@ -11,7 +11,9 @@ Client: class xx
     items: this['Up'] -- triple for loop in tryLogin --- this is a double linked list of (item,count) pairs
     currentLevel: this['v1'] -- most common first index to the items array -- easy to find from heightMap
     minimapLevel: this['NA'] -- set to -0x1 in tryLogin
-    true_yaw: this['vO'] + this['vI'] & 0x7ff -- the & 0x7ff expression in minimapInput (client['e7'] -- see below)
+    true_yaw: this['vO'] -- the & 0x7ff expression in minimapInput (client['e7'] -- see below)
+    cheat_yaw: this['vI'] -- come for free with true_yaw
+    minimapZoom: this['vp'] -- easy enough with the last two - several minimap drawing functions
     baseX: this['Nk'] -- right above the 0xb80 and 0xd40 wilderness boundaries in a >> 0x7
     baseZ: this['va'] -- right above the 0xb80 and 0xd40 wilderness boundaries in a >> 0x7
     getHeight(level, x, z): this['e0'] -- projectFromGround has the only instance of 0x3300 (13056)

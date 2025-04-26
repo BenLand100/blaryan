@@ -14,6 +14,9 @@ function entityX(entity) {
 function entityZ(entity) {
     return entity['z']; 
 }
+function entityPos(entity) {
+    return [entityX(entity), entityZ(entity)]
+}
 function entityTargetID(entity) {
     return entity['Pv'];
 }
@@ -68,6 +71,14 @@ function tileLocTypecode(tile, i) {
 World Info
 ****/
 
+function baseX() {
+    return document.client['Nk']; 
+}
+
+function baseY() {
+    return document.client['va']; 
+}
+
 function currentLevel() {
     return document.client['v1']
 }
@@ -102,23 +113,36 @@ function groundHeight(x, z) {
         y_avg_r = heightmap[level][x_tile][z_tile + 1] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile + 1] * x_fine >> 7;
     return y_avg_l * (128 - z_fine) + y_avg_r * z_fine >> 7;
 }
+    
+function cameraPitch() {
+    return document.client['Ns'];
+}
+  
+function cameraYaw() {
+    return document.client['vZ'];
+}
        
-function project(x, y, z) {
+function minimapYaw() {
+    return document.client['vm'];
+}
+       
+function project_ms(x, y, z) { //local coords!
 
     let x_off = x - document.client['nw'],
         y_off = y - document.client['n2'],
         z_off = z - document.client['no'],
-        sin_pitch = document.sincos_cls['oy'][document.client['Ns']],
-        cos_pitch = document.sincos_cls['Y3'][document.client['Ns']],
-        sin_yaw = document.sincos_cls['oy'][document.client['vZ']],
-        cos_yaw = document.sincos_cls['Y3'][document.client['vZ']],
-      tmp = z_off * sin_yaw + x_off * cos_yaw >> 0x10;
-    z_off = z_off * cos_yaw - x_off * sin_yaw >> 0x10;
+        sin_pitch = document.sincos_cls['oy'][cameraPitch()],
+        cos_pitch = document.sincos_cls['Y3'][cameraPitch()],
+        sin_yaw = document.sincos_cls['oy'][cameraYaw()],
+        cos_yaw = document.sincos_cls['Y3'][cameraYaw()],
+      tmp = z_off * sin_yaw + x_off * cos_yaw >> 16;
+    z_off = z_off * cos_yaw - x_off * sin_yaw >> 16;
     x_off = tmp;
-      tmp = y_off * cos_pitch - z_off * sin_pitch >> 0x10;
-    z_off = y_off * sin_pitch + z_off * cos_pitch >> 0x10;
+      tmp = y_off * cos_pitch - z_off * sin_pitch >> 16;
+    z_off = y_off * sin_pitch + z_off * cos_pitch >> 16;
     y_off = tmp;
-    if (z_off >= 0x32) { // todo: range check these
+    
+    if (z_off >= 0x32) {
         x = document.sincos_cls['YY'] + ((x_off << 0x9) / z_off | 0x0) + 8, 
         y = document.sincos_cls['Y5'] + ((y_off << 0x9) / z_off | 0x0) + 10
         if (x > 8 && y > 10 && x < 517 && y < 345) {
@@ -126,6 +150,25 @@ function project(x, y, z) {
         }
     }
     return null;
+}
+
+function project_mm(global_x, global_z) { //global coords!
+
+    let [x_local, z_local] = globalToLocal(global_x, global_z),
+        zoom = (document.client['vp'] + 256)/256,
+        x_mm = 4 * zoom * (x_local - entityX(me())),
+        z_mm = 4 * zoom * (z_local - entityZ(me())),
+        sin_yaw = document.sincos_cls['oy'][minimap_yaw()],
+        cos_yaw = document.sincos_cls['Y3'][minimap_yaw()];
+        
+    if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 75) { //TODO validate
+        return null;
+    } else {
+        return [
+            x_mm * cos_yaw - z_mm * sin_yaw >> 16,
+            x_mm * sin_yaw + z_mm * cos_yaw >> 16
+        ];
+    }
 }
 
 /****
@@ -283,7 +326,23 @@ function dumpItems() {
     }
 }
 
-function tile2ms(i, j=null, height=0.0) {
+function localToGlobal(x, z = null) {
+    if (z == null) {
+        z = x[1];
+        x = x[0];
+    }
+    return [x >> 7 + baseX(), z >> 7 + baseZ()];
+}
+
+function globalToLocal(X, Z = null) {
+    if (Z == null) {
+        Z = X[1];
+        X = X[0];
+    }
+    return [((X - baseX()) << 7) + 64, ((z - baseZ()) >> 7) + 64];
+}
+
+function localToMS(i, j=null, height=0.0) {
     if (j == null) {
         j = i[1];
         i = i[0];
@@ -291,14 +350,14 @@ function tile2ms(i, j=null, height=0.0) {
     var x = (i << 7) + 64,
         z = (j << 7) + 64, 
         y = groundHeight(x, z) + height * 128;
-    return project(x, y, z);
+    return project_ms(x, y, z);
 }
 
-function entity2ms(entity, height=0.0) {
+function entityToMS(entity, height=0.0) {
     var x = entityX(entity);
     var z = entityZ(entity);
     var y = groundHeight(x, z) + height * 128;
-    return project(x,y,z);
+    return project_ms(x,y,z);
 }
 
 function e2eDist(a, b) {
@@ -318,7 +377,7 @@ function findNPCs(pattern, visible=true, nearby=null) {
     for (var i = 0; i < totalNPCs(); i++) {
         var npc = getNPC(i);
         if (npc != null && npcName(npc).match(pattern)) {
-            if (visible && entity2ms(npc) == null) continue;
+            if (visible && entityToMS(npc) == null) continue;
             if (nearby !== null && e2eDist(player(),npc) > nearby) continue;
             npcs.push(npc)
         }
@@ -339,7 +398,7 @@ function findItems(items, visible=true, nearby=null) {
             for (const item of ground_items(i, j)) {
                 if (items.has(item['id'])) {
                     var p = [i*128+64, j*128+64]
-                    if (visible && tile2ms(i, j) == null) continue;
+                    if (visible && localToMS(i, j) == null) continue;
                     if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
                     locs.push([i, j]);
                 }
@@ -349,7 +408,7 @@ function findItems(items, visible=true, nearby=null) {
     return locs;
 }
 
-function findObjects(types, visible=true, nearby=null) {
+function findObjects(types, visible=true, nearby=null) { //needs testing
     if (Number.isInteger(types)) {
         types = new Set([types]);
     }
@@ -372,7 +431,7 @@ function findObjects(types, visible=true, nearby=null) {
                 console.log(i,j,k,type,tile)
                 if (types.has(type)) {
                     var p = [i*128+64, j*128+64]
-                    if (visible && tile2ms(i, j) == null) continue;
+                    if (visible && localToMS(i, j) == null) continue;
                     if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
                     locs.push([i, j]);
                 }
@@ -439,6 +498,24 @@ async function mouse(x, y, button = 0, delay=100) {
   }
 }
 
+async function holdKey() { // TODO: implement
+    canvas.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        code: "ArrowDown"
+    }));
+}
+
+async function releaseKey() { // TODO: implement
+    canvas.dispatchEvent(new KeyboardEvent("keyup", {
+        key: "ArrowUp",
+        code: "ArrowUp"
+    }));
+}
+
+async function typetext(text) { // TODO: implement
+
+}
+
 async function logout() {
     await mouse(657, 509, button=1);
     await sleep(500);
@@ -450,7 +527,26 @@ async function login() {
     // TODO
 }
 
-async function clickInv(i, j = null, button = 1) {
+async function clickMM(global_x, global_z=null, button=1) {
+    if (global_z === null) {
+        global_z = global_x[1];
+        global_x = global_x[0];
+    }
+    var pos = project_mm(global_x, global_z) 
+    if (pois !== null) {
+        await mouse(pos[0], pos[1], button=button);
+    }
+}
+
+async function clickMS(global_x, global_z=null, height=0.0, button=1) {
+    var [x, z] = globalToLocal(global_x, global_z);
+    var pos = localToMS(x,z,height=height)
+    if (pos !== null) {
+        await mouse(pos[0], pos[1], button=button);
+    }
+}
+
+async function clickInv(i, j=null, button=1) {
     if (j === null) {
         j = Math.floor(i / 4);
         i = i % 4;
@@ -459,7 +555,7 @@ async function clickInv(i, j = null, button = 1) {
 }
 
 async function clickEntity(entity, height=0.0, button=1) {
-    const pos = entity2ms(entity,height=height);
+    const pos = entityToMS(entity,height=height);
     if (pos !== null) {
         await mouse(pos[0], pos[1], button=button);
     }
@@ -515,7 +611,7 @@ async function pickupItems() {
         if (locs.length < 1) break;
         
         var p = chooseRandom(locs)
-        var xy = tile2ms(p);
+        var xy = localToMS(p);
         
         if (xy !== null) {
             await mouse(xy[0], xy[1], button=2);
