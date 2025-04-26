@@ -60,7 +60,7 @@ function tileLocCount(tile) {
     return tile['tz']
 }
 
-function tileLocType(tile, i) {
+function tileLocTypecode(tile, i) {
     return tile['tu'][i]['tk']
 }
 
@@ -362,7 +362,13 @@ function findObjects(types, visible=true, nearby=null) {
         for (var j = Math.max(z-20,0); j < Math.min(z+20,104); j++) {
             var tile = tiles[i][j];
             for (var k = 0; k < tileLocCount(tile); k++) {
-                var type = tileLocType(tile,k);
+                var type = (tileLocTypecode(tile,k) >> 14) & 32767;
+                //these may also be interesting 
+                /*
+                b = E & 127,
+                G = E >> 7 & 127,
+                N = E >> 29 & 3
+                */
                 console.log(i,j,k,type,tile)
                 if (types.has(type)) {
                     var p = [i*128+64, j*128+64]
