@@ -35,6 +35,34 @@ function npcName(npc) {
     return npc['pT'] === null ? '' : npc['pT']['name'];
 }
 
+function afterMe(npc) {
+    return entityTargetID(npc) - 32768 == playerID();
+}
+
+
+/****
+Render Info
+****/
+
+function getScene() {
+    return document.client['Nq']
+}
+
+function getTiles() {
+    var s = getScene();
+    if (s !== null) {
+        return s['rd'];
+    }
+    return null;
+}
+
+function tileLocCount(tile) {
+    return tile['tz']
+}
+
+function tileLocType(tile, i) {
+    return tile['tu'][i]['tk']
+}
 
 /****
 World Info
@@ -321,6 +349,33 @@ function findItems(items, visible=true, nearby=null) {
     return locs;
 }
 
+function findObjects(types, visible=true, nearby=null) {
+    if (Number.isInteger(types)) {
+        types = new Set([types]);
+    }
+    var locs = [];
+    var me = player(),
+        x = entityX(me) >> 7,
+        z = entityZ(me) >> 7;
+    var tiles = getTiles()[currentLevel()];
+    for (var i = Math.max(x-20,0); i < Math.min(x+20,104); i++) {
+        for (var j = Math.max(z-20,0); j < Math.min(z+20,104); j++) {
+            var tile = tiles[i][j];
+            for (var k = 0; k < tileLocCount(tile); k++) {
+                var type = tileLocType(tile,k);
+                console.log(i,j,k,type,tile)
+                if (types.has(type)) {
+                    var p = [i*128+64, j*128+64]
+                    if (visible && tile2ms(i, j) == null) continue;
+                    if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
+                    locs.push([i, j]);
+                }
+            }
+        }
+    }
+    return locs;
+}
+
 function shuffle(array) {
   let currentIndex = array.length;
   while (currentIndex != 0) {
@@ -378,6 +433,17 @@ async function mouse(x, y, button = 0, delay=100) {
   }
 }
 
+async function logout() {
+    await mouse(657, 509, button=1);
+    await sleep(500);
+    await mouse(638, 396, button=1);
+    await sleep(500);
+}
+
+async function login() {
+    // TODO
+}
+
 async function clickInv(i, j = null, button = 1) {
     if (j === null) {
         j = Math.floor(i / 4);
@@ -403,17 +469,28 @@ async function clickOption(pattern, button=1) {
     }
 }
 
-
-async function handleRandoms() {
+async function handleRandoms(killWeakDanger=true) {
     var dangerRandoms = findNPCs(/Shade|Swarm|Zombie/i);
     for (var npc of dangerRandoms) {
-        console.log('Found', npcName(npc), 'run for your life!');
+        if (afterMe(npc)) {    
+            if (killWeakDanger && npcName(npc).match(/Swarm/)) {
+                console.log('Killing', npcName(npc));
+                for (var i = 0; i < 5 && afterMe(npc); i++) {
+                    console.log('...');
+                    await clickEntity(npc, height=0.5);
+                    await sleep(2000);
+                }
+            } else {
+                await logout();
+                throw new Error('Found', npcName(npc), 'run for your life!');
+            }
+        }
     }
     var safeRandoms = findNPCs(/Strange Plant|Drunken Dwarf|Genie|Mysterious Old Man/i);
     for (var npc of safeRandoms) {
         console.log('Found', npcName(npc));
         for (var i = 0; i < 5; i++) {
-            if (entityTargetID(npc) - 32768 == playerID()) {
+            if (afterMe(npc)) {
                 console.log('Solving', npcName(npc));
                 await clickEntity(npc, height=0.5);
                 await sleep(2000);

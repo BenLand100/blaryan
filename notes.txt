@@ -15,7 +15,7 @@ Client: class xx
     baseX: this['Nk'] -- right above the 0xb80 and 0xd40 wilderness boundaries in a >> 0x7
     baseZ: this['va'] -- right above the 0xb80 and 0xd40 wilderness boundaries in a >> 0x7
     getHeight(level, x, z): this['e0'] -- projectFromGround has the only instance of 0x3300 (13056)
-    heightMap: this['Hf'] -- find with getHeight(x,y,z) only 3D array in there
+    levelHeightMap[][][]: this['Hf'] -- find with getHeight(x,y,z) only 3D array in there; also double 0x69 args when created
     project(x,z,y): this['s4'] -- projectFromGround has the only instance of 0x3300 (13056) --- camera x y z pitch yaw
     tabInterfaceID[]: this['fT'] -- 0x211 is a tab y offset; this is the comparison to -1 in that if statement
     selectedTab: this['fz'] -- set in the same if statement as above
@@ -28,6 +28,21 @@ Client: class xx
     menuHeight: this['fQ'] -- easy w/ drawMenu
     menuSize: this['fZ'] -- easy w/ drawMenu
     menuOption[i]: this['fr'] -- easy w/ drawMenu
+    levelTileFlags[][][]: this['He'] -- find with levelHeightMap double 0x69, 0x69 in the constructor and assign
+    scene: this['Nq']  -- near levelHeightMap and levelTitleFlags
+    
+scene: class x9
+    levelTiles[][][]: this['rd'] -- in the constructor four arguments, last is null 
+    
+tile: class x2 -- objects assigned to levelTiles
+    overlay: this['tO'] -- this is the most complex object in terms of arguments in the class
+    locs: this['tu'] -- easy after identifying typecode, incidentally
+    locCount: this['tz'] -- easy after identifying typecode, incidentally
+    
+loc: class 
+    typecode: this['tk'] -- this is just about the only thing << 29 (0x1D)
+    
+overlay: class x0 -- objects assigned to overlay
     
 interface: class
     childIDs[]: this['hm'] -- gives the outermost for loop limit in drawInterface
