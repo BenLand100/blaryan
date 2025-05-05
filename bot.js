@@ -463,7 +463,7 @@ function findItems(items, visible=true, nearby=null, delta=20) {
     return locs;
 }
 
-function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) { //needs testing
+function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) {
     if (Number.isInteger(types)) {
         types = new Set([types]);
     } else {
@@ -882,7 +882,7 @@ async function handleLostHead() {
 var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
 async function handleSmokingRocks() {
     // smoking rocks
-    while ((await findObjects(SMOKING_ROCKS)).length > 0) {
+    while (findObjects(SMOKING_ROCKS).length > 0) {
         console.log('Smoking rocks!');
         await clickMM(myPos());
         await sleep(2000);
