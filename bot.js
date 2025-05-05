@@ -131,7 +131,7 @@ function cameraYaw() {
 }
        
 function minimapYaw() {
-    return document.client['vm'];
+    return cameraYaw() + document.client['vI'] & 2047;
 }
        
 function project_ms(x, y, z) { //local coords!
@@ -162,11 +162,10 @@ function project_ms(x, y, z) { //local coords!
 
 function project_mm(global_x, global_z) { //global coords!
 
-    let [x_local, z_local] = globalToLocal(global_x, global_z),
-        [xp_local, zp_local] = entityToLocal(player()),
+    let [x_char, z_char] = myPos(),
         zoom = (document.client['vp'] + 256)/256,
-        x_mm = 4 * zoom * (x_local - xp_local),
-        z_mm = 4 * zoom * (z_local - zp_local),
+        x_mm = 4 * zoom * (global_x - x_char),
+        z_mm = 4 * zoom * (global_z - z_char),
         sin_yaw = document.sincos_cls['oy'][minimapYaw()],
         cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
       
@@ -175,7 +174,7 @@ function project_mm(global_x, global_z) { //global coords!
     } else {
         return [
             (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
-            -(x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
+            (x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
@@ -258,9 +257,9 @@ function countItem(item_type) {
 }
 
 function freeSlots() {
-    var free = 27;
+    var free = 28;
     var inv_iface = getInterface(3214);
-    for (var i = 0; i < 27; i++) {
+    for (var i = 0; i < 28; i++) {
         if (inv_iface['he'][i] > 0) {
             free = free - 1;
         }
@@ -428,7 +427,7 @@ function findItems(items, visible=true, nearby=null, delta=20) {
     return locs;
 }
 
-function findObjects(types, visible=true, nearby=null, delta=20) { //needs testing
+function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) { //needs testing
     if (Number.isInteger(types)) {
         types = new Set([types]);
     } else {
@@ -448,7 +447,7 @@ function findObjects(types, visible=true, nearby=null, delta=20) { //needs testi
                 G = E >> 7 & 127,
                 N = E >> 29 & 3
                 */
-                if (delta == 1) {
+                if (verbose) {
                     console.log(i,j,k,type,localToGlobal(i,j),tile);
                 }
                 if (types.has(type)) {
@@ -470,6 +469,20 @@ function shuffle(array) {
     currentIndex--;
     [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
   }
+}
+
+function dist(a, b) {
+    return Math.sqrt((a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]));
+}
+
+function nthClosest(ref_pos, possible_pos, n) {
+  const sortedArr = [...possible_pos].sort((a, b) => dist(ref_pos, b) - dist(ref_pos, a)); // Sort in descending order
+  return sortedArr[n - 1];
+}
+
+function chooseClosest(ref_pos, possible_pos, nrand=1.1) {
+    var nth = Math.floor(1.0 + Math.random()*nrand);
+    return nthClosest(ref_pos, possible_pos, nth);
 }
 
 function chooseRandom(choices, n = 1) {
@@ -626,10 +639,32 @@ async function clickMM(global_x, global_z=null, button=1) {
         global_z = global_x[1];
         global_x = global_x[0];
     }
-    var pos = project_mm(global_x, global_z) 
-    clickMM
+    var pos = project_mm(global_x, global_z);
     if (pos !== null) {
         await mouse(pos[0], pos[1], button=button);
+    }
+}
+
+async function clickAlong(pos, path, direction) {
+    var dists = path.map(x => { return dist(pos, x) });
+    if (!direction) dists.reverse();
+    var id = 0, d = dists[0];
+    for (var i = 1; i < dists.length; i++) {
+        if (dists[i] < d) {
+            id = i;
+            d = dists[i];
+        }
+    }
+    var inext = Math.min(id+1, dists.length-1);
+    var pnext = direction ? path[inext] : path[path.length-1-inext];
+    console.log('Closest', id, 'INext', inext);
+    if (id+1 >= dists.length) {
+        await sleep(1500);
+        return true;
+    } else {
+        await clickMM(pnext);
+        await sleep(3000);
+        return false;
     }
 }
 
@@ -703,35 +738,7 @@ async function handleRandoms(killWeakDanger=true) {
 
 var STOP = false;
 
-function dist(a, b) {
-    return Math.sqrt((a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]));
-}
-
-async function clickAlong(pos, path, direction) {
-    var dists = path.map(x => { return dist(pos, x) });
-    console.log(dists, path);
-    if (!direction) dists.reverse();
-    var id = 0, d = dists[0];
-    for (var i = 1; i < dists.length; i++) {
-        if (dists[i] < d) {
-            id = i;
-            d = dists[i];
-        }
-    }
-    var inext = Math.min(id+1, dists.length-1);
-    var pnext = direction ? path[inext] : path[path.length-1-inext];
-    console.log('Cur', pos, 'INext', inext, 'Next', pnext);
-    if (id+1 >= dists.length) {
-        await sleep(1500);
-        return true;
-    } else {
-        await clickMM(pnext);
-        await sleep(3000);
-        return false;
-    }
-}
-
-var varrock_east_bank_mine = [
+var varrock_east_bank_mine_path = [
     [3254, 3421], //bank 
     [3254, 3428],
     [3261, 3429],
@@ -744,6 +751,25 @@ var varrock_east_bank_mine = [
     [3290, 3374],
     [3286, 3366] // mine 
 ]
+
+var varrock_east_bankbank_booths = [
+    [3252, 3419],
+    [3253, 3419],
+    [3254, 3419]
+];
+
+async function depositAll() {
+    for (var i = 0; i < 28; i++) {
+        while (invItem(i) > 0) {
+            openTab(TAB_INVENTORY);
+            await sleep(500);
+            await clickInv(i,null,2);
+            await sleep(1000);
+            await clickOption(/Deposit.*All/i);
+            await sleep(1000);
+        }
+    }
+}
 
 async function varrockEastMiner() {
     while (true) {
@@ -758,23 +784,28 @@ async function varrockEastMiner() {
             copper = countItem(437),
             free = freeSlots(),
             [x, z] = myPos();
-        console.log(copper, tin, free);
-        if (free < 1 || z > 3370) { 
+        console.log('Copper', copper, 'Tin', tin, 'Free', free);
+        if (free == 0 || z > 3370) { 
             var tobank = free < 1;
-            if (await clickAlong([x,z], varrock_east_bank_mine, !tobank)) {
+            console.log('Walking to',tobank?'bank':'mine','...');
+            if (await clickAlong([x,z], varrock_east_bank_mine_path, !tobank)) {
                 console.log('Arrived');
                 if (tobank) {
-                    console.log('Deposit everything');
+                    var booth = chooseRandom(varrock_east_bank_booths);
+                    await clickMS(booth,null,1.0,2);
+                    await sleep(500);
+                    await clickOption(/.*Use-quickly.*/i)
+                    await sleep(2000);
+                    await depositAll();
                     continue;
                 } 
             } else {
-                console.log('Walking...');
                 continue;
             }
         }
         var toFind = copper < tin ? [2090, 2091] : [2094, 2095];
         var objs = findObjects(toFind);
-        var mine = chooseRandom(objs);
+        var mine = chooseClosest([x,z], objs, nrand=1.1);
         if (mine !== null) {
             console.log('Mining', copper < tin ? 'copper' : 'tin', localToGlobal(mine));
             await clickMS(mine);
