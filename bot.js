@@ -518,7 +518,8 @@ function nthClosest(ref_pos, possible_pos, n) {
 }
 
 function chooseClosest(ref_pos, possible_pos, nrand=1.1) {
-    var nth = Math.floor(1.0 + Math.random()*nrand);
+    if (possible_pos.length == 0) return null;
+    var nth = Math.min(Math.floor(1.0 + Math.random()*nrand), possible_pos.length);
     return nthClosest(ref_pos, possible_pos, nth);
 }
 
@@ -693,23 +694,23 @@ async function login(username=null, password=null) {
         await sleep(1500);
         await mouse(457, 97, 1);
         await sleep(500);
-        await keydown('ArrowUp')
+        await holdKey('ArrowUp')
         await sleep(4000);
-        await keyup('ArrowUp')
+        await releaseKey('ArrowUp')
         await sleep(500);
         return true
     }
     return false;
 }
 
-async function clickMM(global_x, global_z=null, button=1) {
+async function clickMM(global_x, global_z=null, button=1, rand=2) {
     if (global_z === null) {
         global_z = global_x[1];
         global_x = global_x[0];
     }
     var pos = project_mm(global_x, global_z);
     if (pos !== null) {
-        await mouse(pos[0], pos[1], button);
+        await mouse(pos[0]+rand*Math.random()-rand/2, pos[1]+rand*Math.random()-rand/2, button);
     }
 }
 
@@ -752,23 +753,23 @@ async function clickAlong(pos, path, direction) {
     }
 }
 
-async function clickMS(x, z=null, height=0.0, button=1) {
+async function clickMS(x, z=null, height=0.0, button=1, rand=3) {
     if (z === null) {
         z = x[1];
         x = x[0];
     }
     var pos = localToMS(x,z,height=height)
     if (pos !== null) {
-        await mouse(pos[0], pos[1], button);
+        await mouse(pos[0]+rand*Math.random()-rand/2, pos[1]+rand*Math.random()-rand/2, button);
     }
 }
 
-async function clickInv(i, j=null, button=1) {
+async function clickInv(i, j=null, button=1, rand=4) {
     if (j === null) {
         j = Math.floor(i / 4);
         i = i % 4;
     }
-    await mouse(592 + i*40, 254 + j*35, button);
+    await mouse(592 + i*40 +rand*Math.random()-rand/2, 254 + j*35 +rand*Math.random()-rand/2, button);
 }
 
 async function clickEntity(entity, height=0.0, button=1) {
@@ -815,7 +816,7 @@ async function pickupItems(items,name_pattern=/Take.*/i) {
 async function unequip() {
     await openTab(TAB_EQUIPMENT);
     await sleep(1000);
-    await mouse(600,329);
+    await mouse(600,329,1);
     await sleep(500);
 }
 
@@ -884,16 +885,18 @@ async function handleRandoms(killWeakDanger=false) {
     
 }
 
-var PICKAXES = [1265,1267,1269,1271,1273,1275];
+var PICKAXES = [1266,1268,1270,1272,1274,1276];
+var PICKAXE_HEADS = [481,483,485,487,489,491];
 async function handleLostHead() {
     // pickup dropped pickaxe heads
-    if (await pickupItems([480,482,484,486,488,490])) { 
+    if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
         console.log('Found droped pickaxe head');
-        if (heldItem() == 466) {
+        if (heldItem() == 467) {
             await unequip();
         }
-        var head = invFind([480,482,484,486,488,490]),
-            handle = invFind(466);
+        await openTab(TAB_INVENTORY);
+        var head = invFind(PICKAXE_HEADS),
+            handle = invFind(467);
         if (head !== null && handle !== null) {
             console.log('Repairing and re-equiping');
             await clickInv(handle, null, 2);
@@ -957,6 +960,7 @@ async function varrockEastMiner() {
                 if (tobank) {
                     var booth = chooseRandom(varrock_east_bank_booths);
                     //console.log('Booth', booth);
+                    await clickMM(booth);
                     await sleep(3000);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
@@ -968,20 +972,28 @@ async function varrockEastMiner() {
                         await runOn();
                     }
                     continue;
-                } else {
-                    await openTab(TAB_INVENTORY);
                 }
             } else {
                 continue;
             }
         }
-        console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
+        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         
         await handleLostHead();
             
-        var toFind = (tin+copper)/2 > iron ? [2092, 2095] : (copper < tin ? [2090, 2091] : [2094, 2095]);
+        var toFind = [2092, 2093]; //iron
         var objs = findObjects(toFind);
+        if (objs.length == 0) {
+            toFind = tin > copper ? [2090, 2091] : [2094, 2095]; // copper or tin backup
+            console.log('No iron');
+            objs = findObjects(toFind)
+        }
+        if (objs.length == 0) {
+            await clickMM(varrock_east_bank_mine_path[varrock_east_bank_mine_path.length-1])
+            continue
+        }
         var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+        
         if (mine !== null) {
             var [gx,gz] = localToGlobal(mine);
             
@@ -1004,6 +1016,7 @@ async function varrockEastMiner() {
                     await clickMM(myPos());
                     await sleep(2000);
                 }
+                if (!isObjectAt(gx,gz,toFind)) break;
                 //console.log('...');
                 await sleep(500);
             }
