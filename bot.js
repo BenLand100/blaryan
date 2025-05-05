@@ -968,7 +968,9 @@ async function varrockEastMiner() {
                         await runOn();
                     }
                     continue;
-                } 
+                } else {
+                    await openTab(TAB_INVENTORY);
+                }
             } else {
                 continue;
             }
@@ -977,7 +979,7 @@ async function varrockEastMiner() {
         
         await handleLostHead();
             
-        var toFind = (tin+copper)/4 > iron ? [2092, 2095] : (copper < tin ? [2090, 2091] : [2094, 2095]);
+        var toFind = (tin+copper)/2 > iron ? [2092, 2095] : (copper < tin ? [2090, 2091] : [2094, 2095]);
         var objs = findObjects(toFind);
         var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
         if (mine !== null) {
@@ -992,6 +994,7 @@ async function varrockEastMiner() {
                 await sleep(500);
             }
             if (anim != 625) continue;
+            await openTab(TAB_INVENTORY);
             
             //console.log('Mining');
             for (var i = 0; i < 30; i++) {
