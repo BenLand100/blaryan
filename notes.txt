@@ -6,6 +6,7 @@ Client: class xx
     localPlayer: client['UC'] -- find with [0x7ff] as array index in client tryConenct
     localPlayerID: this['UB'] -- its the only equality that results in something being assigned to 0x7ff in an "if"
     tryLogin: client['eD'] -- easy enough to find after localPlayer, but contains "Connecting" string"
+    ingame: this['YO'] -- set to false in tryLogin if the login fails
     players: this['nx'] -- part of the above localPlayer expression; also 0x800 for loop limit in init
     npc: this['nM'] -- near localPlayer expression; also 0x2000 for loop limit in init
     items: this['Up'] -- triple for loop in tryLogin --- this is a double linked list of (item,count) pairs

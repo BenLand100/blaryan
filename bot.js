@@ -71,12 +71,20 @@ function tileLocTypecode(tile, i) {
 World Info
 ****/
 
+function ingame() {
+    return document.client['YO'];
+}
+
 function baseX() {
     return document.client['Nk']; 
 }
 
-function baseY() {
+function baseZ() {
     return document.client['va']; 
+}
+
+function myPos() {
+    return localToGlobal(entityToLocal(player()))
 }
 
 function currentLevel() {
@@ -155,18 +163,19 @@ function project_ms(x, y, z) { //local coords!
 function project_mm(global_x, global_z) { //global coords!
 
     let [x_local, z_local] = globalToLocal(global_x, global_z),
+        [xp_local, zp_local] = entityToLocal(player()),
         zoom = (document.client['vp'] + 256)/256,
-        x_mm = 4 * zoom * (x_local - entityX(me())),
-        z_mm = 4 * zoom * (z_local - entityZ(me())),
-        sin_yaw = document.sincos_cls['oy'][minimap_yaw()],
-        cos_yaw = document.sincos_cls['Y3'][minimap_yaw()];
-        
+        x_mm = 4 * zoom * (x_local - xp_local),
+        z_mm = 4 * zoom * (z_local - zp_local),
+        sin_yaw = document.sincos_cls['oy'][minimapYaw()],
+        cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
+      
     if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 75) { //TODO validate
         return null;
     } else {
         return [
-            x_mm * cos_yaw - z_mm * sin_yaw >> 16,
-            x_mm * sin_yaw + z_mm * cos_yaw >> 16
+            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
+            -(x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
@@ -301,6 +310,12 @@ function startMouseEcho() {
         const rect = canvas.getBoundingClientRect();
         console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
     });
+    canvas.addEventListener("keydown", (event) => {
+        console.log(event);
+    })
+    canvas.addEventListener("keyup", (event) => {
+        console.log(event);
+    })
 }
 
 
@@ -326,12 +341,18 @@ function dumpItems() {
     }
 }
 
+function entityToLocal(entity) {
+    var pos = entityPos(entity);
+    if (pos === null) return pos;
+    return [Math.floor(pos[0] / 128), Math.floor(pos[1] / 128)];
+}
+
 function localToGlobal(x, z = null) {
     if (z == null) {
         z = x[1];
         x = x[0];
     }
-    return [x >> 7 + baseX(), z >> 7 + baseZ()];
+    return [x + baseX(), z + baseZ()];
 }
 
 function globalToLocal(X, Z = null) {
@@ -339,7 +360,7 @@ function globalToLocal(X, Z = null) {
         Z = X[1];
         X = X[0];
     }
-    return [((X - baseX()) << 7) + 64, ((z - baseZ()) >> 7) + 64];
+    return [X - baseX(), Z - baseZ()];
 }
 
 function localToMS(i, j=null, height=0.0) {
@@ -385,21 +406,20 @@ function findNPCs(pattern, visible=true, nearby=null) {
     return npcs;
 }
 
-function findItems(items, visible=true, nearby=null) {
+function findItems(items, visible=true, nearby=null, delta=20) {
     if (Number.isInteger(items)) {
         items = new Set([items]);
+    } else {
+        types = new Set(types);
     }
     var locs = [];
-    var me = player(),
-        x = entityX(me) >> 7,
-        z = entityZ(me) >> 7;
-    for (var i = Math.max(x-20,0); i < Math.min(x+20,104); i++) {
-        for (var j = Math.max(z-20,0); j < Math.min(z+20,104); j++) {
+    var [x,z] = entityToLocal(player());
+    for (var i = Math.max(x-delta,0); i < Math.min(x+delta+1,104); i++) {
+        for (var j = Math.max(z-delta,0); j < Math.min(z+delta+1,104); j++) {
             for (const item of ground_items(i, j)) {
                 if (items.has(item['id'])) {
                     var p = [i*128+64, j*128+64]
                     if (visible && localToMS(i, j) == null) continue;
-                    if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
                     locs.push([i, j]);
                 }
             }
@@ -408,17 +428,17 @@ function findItems(items, visible=true, nearby=null) {
     return locs;
 }
 
-function findObjects(types, visible=true, nearby=null) { //needs testing
+function findObjects(types, visible=true, nearby=null, delta=20) { //needs testing
     if (Number.isInteger(types)) {
         types = new Set([types]);
+    } else {
+        types = new Set(types);
     }
     var locs = [];
-    var me = player(),
-        x = entityX(me) >> 7,
-        z = entityZ(me) >> 7;
+    var [x,z] = entityToLocal(player());
     var tiles = getTiles()[currentLevel()];
-    for (var i = Math.max(x-20,0); i < Math.min(x+20,104); i++) {
-        for (var j = Math.max(z-20,0); j < Math.min(z+20,104); j++) {
+    for (var i = Math.max(x-delta,0); i < Math.min(x+delta+1,104); i++) {
+        for (var j = Math.max(z-delta,0); j < Math.min(z+delta+1,104); j++) {
             var tile = tiles[i][j];
             for (var k = 0; k < tileLocCount(tile); k++) {
                 var type = (tileLocTypecode(tile,k) >> 14) & 32767;
@@ -428,7 +448,9 @@ function findObjects(types, visible=true, nearby=null) { //needs testing
                 G = E >> 7 & 127,
                 N = E >> 29 & 3
                 */
-                console.log(i,j,k,type,tile)
+                if (delta == 1) {
+                    console.log(i,j,k,type,localToGlobal(i,j),tile);
+                }
                 if (types.has(type)) {
                     var p = [i*128+64, j*128+64]
                     if (visible && localToMS(i, j) == null) continue;
@@ -498,33 +520,105 @@ async function mouse(x, y, button = 0, delay=100) {
   }
 }
 
-async function holdKey() { // TODO: implement
+function defaultCode(key) {
+    if (key.match(/Arrow.*/)) {
+        return key;
+    } else if (key.match(/Shift/)) {
+        return "ShiftRight";
+    } else {
+        return "Key" + key.toUpperCase()
+    }
+}
+
+async function holdKey(key, code=null, shift=false) {
+    if (code === null) {
+        code = defaultCode(key);
+    }
     canvas.dispatchEvent(new KeyboardEvent("keydown", {
-        key: "ArrowDown",
-        code: "ArrowDown"
+        key: key,
+        code: code,
+        shiftKey: shift
     }));
 }
 
-async function releaseKey() { // TODO: implement
+async function releaseKey(key, code=null, shift=false) {
+    if (code === null) {
+        code = defaultCode(key);
+    }
     canvas.dispatchEvent(new KeyboardEvent("keyup", {
-        key: "ArrowUp",
-        code: "ArrowUp"
+        key: key,
+        code: code,
+        shiftKey: shift
     }));
 }
 
-async function typetext(text) { // TODO: implement
-
+async function typetext(text, delay=75) { // TODO: implement
+    var shiftDown = false;
+    for (var i = 0; i < text.length; i++) {
+        var c = text[i];
+        if (c.match(/[\!\@\#\$\%\^\&\*\(\)\_\+\{\}\|\:\"\<\>\?\~]|[A-Z]/)) {
+            if (!shiftDown) {
+                shiftDown = true;
+                await holdKey('Shift', shift=shiftDown);
+                await sleep(delay);
+            }
+        } else {
+            if (shiftDown) {
+                shiftDown = false;
+                await releaseKey('Shift', shift=shiftDown);
+                await sleep(delay);
+            }
+        }
+        await holdKey(c, shift=shiftDown);
+        await sleep(delay);
+        await releaseKey(c, shift=shiftDown);
+        await sleep(delay);
+    }
+    if (shiftDown) {
+        await releaseKey('Shift');
+        await sleep(delay);
+    }
 }
 
 async function logout() {
+    if (!ingame()) return true;
     await mouse(657, 509, button=1);
     await sleep(500);
     await mouse(638, 396, button=1);
-    await sleep(500);
+    await sleep(1000);
+    return !ingame();
 }
 
-async function login() {
-    // TODO
+async function login(username=null, password=null) {
+    if (ingame()) return true;
+    if (username === null) {
+        username = USERNAME;
+        password = PASSWORD;
+    }
+    await mouse(472, 338, button=1);
+    await sleep(500);
+    await mouse(474, 308, button=1);
+    await sleep(500);
+    await mouse(382, 268, button=1);
+    await sleep(500);
+    await typetext(username);
+    await sleep(500);
+    await mouse(382, 285, button=1);
+    await sleep(500);
+    await typetext(password);
+    await sleep(500);
+    await mouse(331, 335, button=1);
+    await sleep(500);
+    for (var i = 0; i < 5 && !ingame(); i++) {
+        await sleep(1000);
+    }
+    if (ingame()) {
+        await sleep(1500);
+        await mouse(457, 97, button=1);
+        await sleep(500);
+        return true
+    }
+    return false;
 }
 
 async function clickMM(global_x, global_z=null, button=1) {
@@ -533,13 +627,17 @@ async function clickMM(global_x, global_z=null, button=1) {
         global_x = global_x[0];
     }
     var pos = project_mm(global_x, global_z) 
-    if (pois !== null) {
+    clickMM
+    if (pos !== null) {
         await mouse(pos[0], pos[1], button=button);
     }
 }
 
-async function clickMS(global_x, global_z=null, height=0.0, button=1) {
-    var [x, z] = globalToLocal(global_x, global_z);
+async function clickMS(x, z=null, height=0.0, button=1) {
+    if (z === null) {
+        z = x[1];
+        x = x[0];
+    }
     var pos = localToMS(x,z,height=height)
     if (pos !== null) {
         await mouse(pos[0], pos[1], button=button);
@@ -605,6 +703,90 @@ async function handleRandoms(killWeakDanger=true) {
 
 var STOP = false;
 
+function dist(a, b) {
+    return Math.sqrt((a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]));
+}
+
+async function clickAlong(pos, path, direction) {
+    var dists = path.map(x => { return dist(pos, x) });
+    console.log(dists, path);
+    if (!direction) dists.reverse();
+    var id = 0, d = dists[0];
+    for (var i = 1; i < dists.length; i++) {
+        if (dists[i] < d) {
+            id = i;
+            d = dists[i];
+        }
+    }
+    var inext = Math.min(id+1, dists.length-1);
+    var pnext = direction ? path[inext] : path[path.length-1-inext];
+    console.log('Cur', pos, 'INext', inext, 'Next', pnext);
+    if (id+1 >= dists.length) {
+        await sleep(1500);
+        return true;
+    } else {
+        await clickMM(pnext);
+        await sleep(3000);
+        return false;
+    }
+}
+
+var varrock_east_bank_mine = [
+    [3254, 3421], //bank 
+    [3254, 3428],
+    [3261, 3429],
+    [3274, 3429],
+    [3284, 3427],
+    [3287, 3416],
+    [3290, 3406],
+    [3291, 3395],
+    [3291, 3385],
+    [3290, 3374],
+    [3286, 3366] // mine 
+]
+
+async function varrockEastMiner() {
+    while (true) {
+        if (STOP) return;
+        if (!await login()) {
+            console.log('Can\'t login; bailing out!');
+            return;
+        }
+        await handleRandoms();
+        
+        var tin = countItem(439),
+            copper = countItem(437),
+            free = freeSlots(),
+            [x, z] = myPos();
+        console.log(copper, tin, free);
+        if (free < 1 || z > 3370) { 
+            var tobank = free < 1;
+            if (await clickAlong([x,z], varrock_east_bank_mine, !tobank)) {
+                console.log('Arrived');
+                if (tobank) {
+                    console.log('Deposit everything');
+                    continue;
+                } 
+            } else {
+                console.log('Walking...');
+                continue;
+            }
+        }
+        var toFind = copper < tin ? [2090, 2091] : [2094, 2095];
+        var objs = findObjects(toFind);
+        var mine = chooseRandom(objs);
+        if (mine !== null) {
+            console.log('Mining', copper < tin ? 'copper' : 'tin', localToGlobal(mine));
+            await clickMS(mine);
+            for (var i = 0; i < 30; i++) {
+                if (freeSlots() < free) break;
+                console.log('...');
+                await sleep(500);
+            }
+        }  
+    }   
+}
+
 async function pickupItems() {
     for (var n = 0; n < 5 && freeSlots() > 0; n++) {
         var locs = findItems(new Set([526,314]));
@@ -642,7 +824,11 @@ async function buryBones() {
 async function chickenKiller() {
     while (true) {
         if (STOP) return;
-        handleRandoms();
+        if (! await login()) {
+            console.log('Can\'t login; bailing out!');
+            return;
+        }
+        await handleRandoms();
         
         if (freeSlots() < 1) {
             await buryBones()
@@ -677,4 +863,4 @@ async function chickenKiller() {
     }
 }
 
-chickenKiller().then(() => { console.log("Done") });
+varrockEastMiner().then(() => { console.log("Done") });
