@@ -195,26 +195,6 @@ function currentTab() {
     return document.client['fz'];
 }
 
-function openTab(tab) {
-    if (tab == currentTab()) {
-        return;
-    }
-    
-    if (tab == TAB_COMBAT) { // Combat
-        mouse(566,211,button=1);
-    } else if (tab == TAB_STATS) { // Stats
-        mouse(594,211,button=1);
-    } else if (tab == 2) { // Quests
-        mouse(620,211,button=1);
-    } else if (tab == TAB_INVENTORY) { // Inventory
-        mouse(658,211,button=1);
-    } else if (tab == TAB_EQUIPMENT) { // Inventory
-        mouse(690,211,button=1);
-    } else if (tab == TAB_RUN) { // Run
-        mouse(722,511,button=1);
-    }
-}
-
 function getInterface(iface_id) {
     return document.iface_cls['EI'][iface_id];
 }
@@ -339,8 +319,9 @@ function startMouseEcho() {
     
     canvas.addEventListener("mousedown", (event) => {
         const rect = canvas.getBoundingClientRect();
-        console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        console.log('mousedown',Math.floor(event.clientX - rect.left), event.clientY - rect.top);
     });
+    
     canvas.addEventListener("keydown", (event) => {
         console.log(event);
     })
@@ -649,6 +630,33 @@ async function typetext(text, delay=75) { // TODO: implement
     }
 }
 
+async function openTab(tab) {
+    if (tab == currentTab()) {
+        return;
+    }
+    
+    if (tab == TAB_COMBAT) { // Combat
+        await mouse(566,211,button=1);
+    } else if (tab == TAB_STATS) { // Stats
+        await mouse(594,211,button=1);
+    } else if (tab == 2) { // Quests
+        await mouse(620,211,button=1);
+    } else if (tab == TAB_INVENTORY) { // Inventory
+        await mouse(658,211,button=1);
+    } else if (tab == TAB_EQUIPMENT) { // Inventory
+        await mouse(690,211,button=1);
+    } else if (tab == TAB_RUN) { // Run
+        await mouse(722,511,button=1);
+    }
+}
+
+async function runOn() {
+    await openTab(TAB_RUN);
+    await sleep(500);
+    await mouse(630,292);
+    await sleep(500);
+}
+
 async function logout() {
     if (!ingame()) return true;
     await mouse(657, 509, button=1);
@@ -684,6 +692,10 @@ async function login(username=null, password=null) {
     if (ingame()) {
         await sleep(1500);
         await mouse(457, 97, button=1);
+        await sleep(500);
+        await keydown('ArrowUp')
+        await sleep(4000);
+        await keyup('ArrowUp')
         await sleep(500);
         return true
     }
@@ -729,7 +741,7 @@ async function clickAlong(pos, path, direction) {
     }
     
     var pnext = direction ? path[inext] : path[path.length-1-inext];
-    console.log('Closest', inext, 'INext', inext);
+    //console.log('Closest', inext, 'INext', inext);
     if (iclose+1 >= dists.length && dclose < 3) {
         await sleep(1500);
         return true;
@@ -810,7 +822,7 @@ async function unequip() {
 async function depositAll(except = null) {
     for (var i = 0; i < 28 && !STOP; i++) {
         if (invItem(i) > 0 && except !== null && !except.has(invItem(i))) {
-            openTab(TAB_INVENTORY);
+            await openTab(TAB_INVENTORY);
             await sleep(500);
             await clickInv(i,null,2);
             await sleep(1000);
@@ -904,7 +916,7 @@ var varrock_east_bank_mine_path = [
     [3254, 3421], //bank 
     [3254, 3428],
     [3261, 3429],
-    [3270, 3425],
+    [3270, 3427],
     [3278, 3425],
     [3283, 3420],
     [3287, 3416],
@@ -937,7 +949,6 @@ async function varrockEastMiner() {
             iron = countItem(441),
             free = freeSlots(),
             [x, z] = myPos();
-        console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         if (free == 0 || z > 3370) { 
             var tobank = free < 1;
             //console.log('Walking to',tobank?'bank':'mine','...');
@@ -946,13 +957,15 @@ async function varrockEastMiner() {
                 if (tobank) {
                     var booth = chooseRandom(varrock_east_bank_booths);
                     //console.log('Booth', booth);
-                    await clickMM(booth);
                     await sleep(3000);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
                         await sleep(2000);
                         await depositAll(new Set(PICKAXES));
+                        await clickMM(myPos());
+                        await sleep(1000);
+                        await runOn();
                     }
                     continue;
                 } 
@@ -960,6 +973,7 @@ async function varrockEastMiner() {
                 continue;
             }
         }
+        console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         
         await handleLostHead();
             
@@ -979,7 +993,7 @@ async function varrockEastMiner() {
             }
             if (anim != 625) continue;
             
-            console.log('Mining');
+            //console.log('Mining');
             for (var i = 0; i < 30; i++) {
                 if (entityAnim(player()) != 625) break;
                 if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
@@ -987,7 +1001,7 @@ async function varrockEastMiner() {
                     await clickMM(myPos());
                     await sleep(2000);
                 }
-                console.log('...');
+                //console.log('...');
                 await sleep(500);
             }
         }  
@@ -998,7 +1012,7 @@ async function buryBones() {
     await sleep(500);
     for (var i = 0; i < 28; i++) {
         while (invItem(i) == 527) { // BONES
-            openTab(TAB_INVENTORY);
+            await openTab(TAB_INVENTORY);
             await sleep(500);
             await clickInv(i);
             await sleep(1000);
