@@ -134,7 +134,7 @@ function cameraYaw() {
 }
        
 function minimapYaw() {
-    return cameraYaw() + document.client['vI'] & 2047;
+    return (cameraYaw() + document.client['vI']) & 2047;
 }
        
 function project_ms(x, y, z) { //local coords!
@@ -169,15 +169,15 @@ function project_mm(global_x, global_z) { //global coords!
         zoom = (document.client['vp'] + 256)/256,
         x_mm = 4 * zoom * (global_x - x_char),
         z_mm = 4 * zoom * (global_z - z_char),
-        sin_yaw = document.sincos_cls['oy'][minimapYaw()],
+        sin_yaw = -document.sincos_cls['oy'][minimapYaw()],
         cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
       
     if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 70) { //TODO validate
         return null;
     } else {
         return [
-            (x_mm * cos_yaw + z_mm * sin_yaw >> 16) + 656,
-            -(x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
+            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
+            (-x_mm * sin_yaw - z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
@@ -461,6 +461,24 @@ function findItems(items, visible=true, nearby=null, delta=20) {
         }
     }
     return locs;
+}
+
+function isObjectAt(global_x, global_z, types) {
+    var [i,j] = globalToLocal(global_x, global_z);
+    if (i < 0 || j < 0 || i > 103 || j > 103) return false;
+    if (Number.isInteger(types)) {
+        types = new Set([types]);
+    } else {
+        types = new Set(types);
+    }
+    var tile = getTiles()[currentLevel()][i][j];
+    for (var k = 0; k < tileLocCount(tile); k++) {
+        var type = (tileLocTypecode(tile,k) >> 14) & 32767;
+        if (types.has(type)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) {
@@ -879,15 +897,6 @@ async function handleLostHead() {
     }
 }
 
-var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
-async function handleSmokingRocks() {
-    // smoking rocks
-    while (findObjects(SMOKING_ROCKS).length > 0) {
-        console.log('Smoking rocks!');
-        await clickMM(myPos());
-        await sleep(2000);
-    }
-}
 
 var STOP = false;
 
@@ -912,6 +921,8 @@ var varrock_east_bank_booths = [
     [3254, 3419]
 ];
 
+var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
+
 async function varrockEastMiner() {
     while (true) {
         if (STOP) return;
@@ -929,12 +940,12 @@ async function varrockEastMiner() {
         console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         if (free == 0 || z > 3370) { 
             var tobank = free < 1;
-            console.log('Walking to',tobank?'bank':'mine','...');
+            //console.log('Walking to',tobank?'bank':'mine','...');
             if (await clickAlong([x,z], varrock_east_bank_mine_path, !tobank)) {
-                console.log('Arrived');
+                //console.log('Arrived');
                 if (tobank) {
                     var booth = chooseRandom(varrock_east_bank_booths);
-                    console.log('Booth', booth);
+                    //console.log('Booth', booth);
                     await clickMM(booth);
                     await sleep(3000);
                     await clickMS(globalToLocal(booth),null,1.0,2);
@@ -956,21 +967,26 @@ async function varrockEastMiner() {
         var objs = findObjects(toFind);
         var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
         if (mine !== null) {
-        
-            console.log('Clicking', copper < tin ? 'copper' : 'tin', localToGlobal(mine));
+            var [gx,gz] = localToGlobal(mine);
+            
             await clickMS(mine);
             
             var anim;
-            for (var i = 0; i < 5; i++) {
+            for (var i = 0; i < 7; i++) {
                 anim = entityAnim(player());
                 if (anim == 625) break;
                 await sleep(500);
             }
             if (anim != 625) continue;
+            
             console.log('Mining');
             for (var i = 0; i < 30; i++) {
                 if (entityAnim(player()) != 625) break;
-                await handleSmokingRocks();
+                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                    console.log('Smoking rocks!');
+                    await clickMM(myPos());
+                    await sleep(2000);
+                }
                 console.log('...');
                 await sleep(500);
             }
