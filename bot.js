@@ -705,14 +705,14 @@ async function clickAlong(pos, path, direction) {
             dclose = dists[i];
             iclose = i;
         }
-        if (dists[i] < 70) {
+        if (dists[i] < 16) {
             inext = i;
         }
     }
     
     var pnext = direction ? path[inext] : path[path.length-1-inext];
     console.log('Closest', inext, 'INext', inext);
-    if (inext+1 >= dists.length) {
+    if (iclose+1 >= dists.length) {
         await sleep(1500);
         return true;
     } else {
