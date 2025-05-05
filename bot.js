@@ -173,8 +173,8 @@ function project_mm(global_x, global_z) { //global coords!
         return null;
     } else {
         return [
-            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
-            (x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
+            (x_mm * cos_yaw + z_mm * sin_yaw >> 16) + 656,
+            -(x_mm * sin_yaw + z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
