@@ -172,7 +172,7 @@ function project_mm(global_x, global_z) { //global coords!
         sin_yaw = document.sincos_cls['oy'][minimapYaw()],
         cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
       
-    if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 75) { //TODO validate
+    if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 70) { //TODO validate
         return null;
     } else {
         return [
@@ -686,17 +686,33 @@ async function clickMM(global_x, global_z=null, button=1) {
 async function clickAlong(pos, path, direction) {
     var dists = path.map(x => { return dist(pos, x) });
     if (!direction) dists.reverse();
-    var id = 0, d = dists[0];
+    
+    /*
+    //this tried to click the point after the closest point
+    var iclose = 0, dclose = dists[0];
     for (var i = 1; i < dists.length; i++) {
         if (dists[i] < d) {
-            id = i;
-            d = dists[i];
+            iclose = i;
+            dclose = dists[i];
         }
     }
-    var inext = Math.min(id+1, dists.length-1);
+    var inext = Math.min(iclose+1, dists.length-1);
+    */
+    
+    var inext = 0, iclose = 0, dclose = dists[0];
+    for (var i = 1; i < dists.length; i++) {
+        if (dists[i] < dclose) {
+            dclose = dists[i];
+            iclose = i;
+        }
+        if (dists[i] < 70) {
+            inext = i;
+        }
+    }
+    
     var pnext = direction ? path[inext] : path[path.length-1-inext];
-    console.log('Closest', id, 'INext', inext);
-    if (id+1 >= dists.length) {
+    console.log('Closest', inext, 'INext', inext);
+    if (inext+1 >= dists.length) {
         await sleep(1500);
         return true;
     } else {
