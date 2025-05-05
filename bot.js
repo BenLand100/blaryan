@@ -90,6 +90,10 @@ function myPos() {
     return localToGlobal(entityToLocal(player()))
 }
 
+function myAnim() {
+    return entityAnim(player());
+}
+
 function currentLevel() {
     return document.client['v1']
 }
@@ -202,6 +206,31 @@ function getInterface(iface_id) {
 function heldItem(idx) {
     var inv_iface = getInterface(1688);
     return inv_iface['he'][3]
+}
+
+function bankItem(idx) {
+    var inv_iface = getInterface(5382);
+    return inv_iface['he'][idx]
+}
+
+function bankCount(idx) {
+    var inv_iface = getInterface(5382);
+    return inv_iface['hs'][idx]
+}
+
+function bankFind(items) {    
+    if (Number.isInteger(items)) {
+        items = new Set([items]);
+    } else {
+        items = new Set(items);
+    }
+    var inv_iface = getInterface(5382);
+    for (var i = 0; i < 48; i++) {
+        if (items.has(inv_iface['he'][i])) {
+            return i;
+        }
+    }
+    return null;
 }
 
 function invItem(x, y = null) {
@@ -576,6 +605,8 @@ function defaultCode(key) {
         return key;
     } else if (key.match(/Shift/)) {
         return "ShiftRight";
+    } else if (key == 'Enter') {
+        return 'Enter';
     } else {
         return "Key" + key.toUpperCase()
     }
@@ -629,6 +660,21 @@ async function typetext(text, delay=75) { // TODO: implement
         await releaseKey('Shift');
         await sleep(delay);
     }
+}
+
+async function enter() {
+    await holdKey('Enter');
+    await sleep(75);
+    await releaseKey('Enter');
+    await sleep(75);
+}
+
+async function waitForAnim(cycles=5) {
+    for (var _ = 0; _ < cycles && myAnim() == -1; _++) await sleep(500);
+}
+
+async function waitForIdle(cycles=30) {
+    for (var _ = 0; _ < cycles && myAnim() != -1; _++) await sleep(500);
 }
 
 async function openTab(tab) {
@@ -772,6 +818,14 @@ async function clickInv(i, j=null, button=1, rand=4) {
     await mouse(592 + i*40 +rand*Math.random()-rand/2, 254 + j*35 +rand*Math.random()-rand/2, button);
 }
 
+async function clickBank(i, j=null, button=1, rand=4) {
+    if (j === null) {
+        j = Math.floor(i / 8);
+        i = i % 8;
+    }
+    await mouse(95 + i*47 +rand*Math.random()-rand/2, 85 + j*38 +rand*Math.random()-rand/2, button);
+}
+
 async function clickEntity(entity, height=0.0, button=1) {
     const pos = entityToMS(entity,height=height);
     if (pos !== null) {
@@ -822,7 +876,7 @@ async function unequip() {
 
 async function depositAll(except = null) {
     for (var i = 0; i < 28 && !STOP; i++) {
-        if (invItem(i) > 0 && except !== null && !except.has(invItem(i))) {
+        if (invItem(i) > 0 && (except === null || !except.has(invItem(i)))) {
             await openTab(TAB_INVENTORY);
             await sleep(500);
             await clickInv(i,null,2);
@@ -873,6 +927,7 @@ async function handleRandoms(killWeakDanger=false) {
     for (var npc of safeRandoms) {
         console.log('Found', npcName(npc));
         for (var i = 0; i < 5; i++) {
+            if (npcName(npc) === null || npcName(npc) == "") break;
             if (afterMe(npc) || npcName(npc).match(/Strange.*Plant/i)) {
                 console.log('Solving', npcName(npc));
                 await clickEntity(npc, height=0.5);
@@ -881,6 +936,18 @@ async function handleRandoms(killWeakDanger=false) {
                 break;
             }
         }
+    }
+    var lamp = invFind(2529);
+    if (lamp !== null) {
+        console.log('Opening lamp');
+        await openTab(TAB_INVENTORY);
+        await sleep(1000);
+        await clickInv(lamp);
+        await sleep(2000);
+        await mouse(170,236,1);
+        await sleep(1000);
+        await mouse(265,266,1);
+        await sleep(2000);
     }
     
 }
@@ -914,6 +981,111 @@ async function handleLostHead() {
 
 
 var STOP = false;
+  
+var falador_smelter_west_bank_path = [
+    [2971, 3377],
+    [2964, 3379],
+    [2956, 3381],
+    [2950, 3377],
+    [2946, 3371],
+    [2946, 3369]
+]
+
+var falador_west_bank_booths = [
+    [2945, 3367],
+    [2946, 3367],
+    [2947, 3367],
+    [2948, 3367],
+    [2949, 3367]
+]
+
+var ingredients = [439,437];
+
+async function faladorWestSmelter() {
+    while (true) {
+        if (STOP) return;
+        if (!await login()) {
+            console.log('Can\'t login; bailing out!');
+            return;
+        }
+        await handleRandoms();
+        
+        var tin = countItem(439),
+            copper = countItem(437),
+            iron = countItem(441),
+            free = freeSlots(),
+            [x, z] = myPos();
+        var tobank = tin == 0 || copper == 0;
+        if (tobank || x < 2973) { 
+            //console.log('Walking to',tobank?'bank':'mine','...');
+            if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
+                //console.log('Arrived');
+                if (tobank) {
+                    var booth = chooseRandom(falador_west_bank_booths);
+                    //console.log('Booth', booth);
+                    await clickMM(booth);
+                    await sleep(500);
+                    await waitForIdle(10);
+                    await clickMS(globalToLocal(booth),null,1.0,2);
+                    await sleep(500);
+                    if (await clickOption(/.*Use-quickly.*/i)) {
+                        await sleep(2000);
+                        await depositAll();
+                        for (var itype of ingredients) {      
+                            var bpos = await bankFind(itype);
+                            if (bpos === null) {
+                                console.log('Out of', itype);
+                            } else {
+                                await clickBank(bpos,null,2);
+                                await sleep(750);
+                                if (await clickOption(/Withdraw X.*/i)) {
+                                    await sleep(1000);
+                                    await typetext('14\n');
+                                    await enter();
+                                    await sleep(1000);
+                                }
+                            }
+                        }   
+                        await clickMM(myPos());
+                        await sleep(1000);
+                        await runOn();
+                    }
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        }
+        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
+        
+        if (z >= 3377) { // outside the door
+            await clickMS(globalToLocal(2971,3376.5),null,1.0,2);
+            await sleep(500);
+            await clickOption(/Open.*/i);
+            await sleep(750);
+        }
+        if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
+            await clickMM([2974, 3369]);
+            await sleep(500);
+            await waitForIdle(10);
+            continue
+        }
+        
+        //smelt
+        await openTab(TAB_INVENTORY);
+        var comp = invFind(ingredients);
+        if (comp === null) continue;
+        await clickInv(comp);
+        await sleep(500);
+        await clickMS(globalToLocal(2976, 3369),null,1.0,1);
+        await waitForAnim(5);
+        if (myAnim() != 899) continue;
+        for (var _ = 0; _ < 5 && myAnim() == 899; _++) { 
+            await sleep(500);
+        }
+        
+    }   
+}
 
 var varrock_east_bank_mine_path = [
     [3254, 3421], //bank 
@@ -1079,4 +1251,4 @@ async function chickenKiller() {
     }
 }
 
-varrockEastMiner().then(() => { console.log("Done") });
+faladorWestSmelter().then(() => { console.log("Done") });
