@@ -188,6 +188,7 @@ Interface Info
 var TAB_COMBAT = 0,
     TAB_STATS = 1,
     TAB_INVENTORY = 3,
+    TAB_EQUIPMENT = 4,
     TAB_RUN = 12;
 
 function currentTab() {
@@ -207,6 +208,8 @@ function openTab(tab) {
         mouse(620,211,button=1);
     } else if (tab == TAB_INVENTORY) { // Inventory
         mouse(658,211,button=1);
+    } else if (tab == TAB_EQUIPMENT) { // Inventory
+        mouse(690,211,button=1);
     } else if (tab == TAB_RUN) { // Run
         mouse(722,511,button=1);
     }
@@ -214,6 +217,11 @@ function openTab(tab) {
 
 function getInterface(iface_id) {
     return document.iface_cls['EI'][iface_id];
+}
+
+function heldItem(idx) {
+    var inv_iface = getInterface(1688);
+    return inv_iface['he'][3]
 }
 
 function invItem(x, y = null) {
@@ -225,18 +233,35 @@ function invItem(x, y = null) {
     for (var i = 0; i < children.length; i++) {
         iface_id = children[i]
         iface = getInterface(iface_id)
-        console.log(i,iface_id, iface);
+        if (iface['he']) {
+            console.log(i,iface_id, iface);
+        }
     }
     **/
-    var inv_iface = getInterface(3214)
+    var inv_iface = getInterface(3214);
     var idx = y === null ? x : x + 4*y;
     return inv_iface['he'][idx]
 }
 
 function invCount(x, y = null) {
-    var inv_iface = getInterface(3214)
+    var inv_iface = getInterface(3214);
     var idx = y === null ? x : x + 4*y;
     return inv_iface['hs'][idx]
+}
+
+function invFind(items) {    
+    if (Number.isInteger(items)) {
+        items = new Set([items]);
+    } else {
+        items = new Set(items);
+    }
+    var inv_iface = getInterface(3214);
+    for (var i = 0; i < 28; i++) {
+        if (items.has(inv_iface['he'][i])) {
+            return i;
+        }
+    }
+    return null;
 }
 
 function countItems() {
@@ -347,6 +372,10 @@ function dumpItems() {
     }
 }
 
+function dumpObjects() {
+    findObjects(0, true, null, 1, true);
+}
+
 function entityToLocal(entity) {
     var pos = entityPos(entity);
     if (pos === null) return pos;
@@ -416,7 +445,7 @@ function findItems(items, visible=true, nearby=null, delta=20) {
     if (Number.isInteger(items)) {
         items = new Set([items]);
     } else {
-        types = new Set(types);
+        items = new Set(items);
     }
     var locs = [];
     var [x,z] = entityToLocal(player());
@@ -483,8 +512,10 @@ function dist(a, b) {
 }
 
 function nthClosest(ref_pos, possible_pos, n) {
-  const sortedArr = [...possible_pos].sort((a, b) => dist(ref_pos, b) - dist(ref_pos, a)); // Sort in descending order
-  return sortedArr[n - 1];
+    var arr = [...possible_pos];
+    shuffle(arr);
+    const sortedArr = arr.sort((a, b) => dist(ref_pos, a) - dist(ref_pos, b));
+    return sortedArr[n - 1];
 }
 
 function chooseClosest(ref_pos, possible_pos, nrand=1.1) {
@@ -670,7 +701,7 @@ async function clickAlong(pos, path, direction) {
         return true;
     } else {
         await clickMM(pnext);
-        await sleep(3000);
+        await sleep(2500);
         return false;
     }
 }
@@ -711,8 +742,41 @@ async function clickOption(pattern, button=1) {
     }
 }
 
-async function handleRandoms(killWeakDanger=true) {
-    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie/i);
+async function pickupItems(items,name_pattern=/Take.*/i) {
+    var set = new Set(items);
+    for (var n = 0; n < 5 && freeSlots() > 0; n++) {
+        var locs = findItems(set);
+        if (locs.length < 1) break;
+        
+        var p = chooseRandom(locs)
+        var xy = localToMS(p);
+        
+        if (xy !== null) {
+            await mouse(xy[0], xy[1], button=2);
+            await sleep(400);
+            var tot = countItems();
+            if (await clickOption(name_pattern)) {
+                for (var i = 0; i < 20 && tot == countItems(); i++) {
+                    await sleep(500);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+async function unequip() {
+    await openTab(TAB_EQUIPMENT);
+    await sleep(1000);
+    await mouse(600,329);
+    await sleep(500);
+}
+
+async function handleRandoms(killWeakDanger=false) {
+    // run random direction from dangerous randoms
+    // would be better w/ pathing checks
+    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem/i);
     for (var npc of dangerRandoms) {
         if (afterMe(npc)) {    
             if (killWeakDanger && npcName(npc).match(/Swarm/)) {
@@ -723,16 +787,31 @@ async function handleRandoms(killWeakDanger=true) {
                     await sleep(2000);
                 }
             } else {
-                await logout();
-                throw new Error('Found', npcName(npc), 'run for your life!');
+                var pos = myPos(),
+                    alpha = 2*3.14195*Math.random(),
+                    sin_alpha = Math.sin(alpha),
+                    cos_alpha = Math.cos(alpha),
+                    seg_dist = 8;
+                var safe_route = [
+                    [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],
+                    [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],
+                    [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
+                ];
+                console.log('Running', safe_route);
+                for (var i = 0; i < 5 && !await clickAlong(myPos(), safe_route, true); i++) await sleep(1000);
+                await sleep(5000);
+                console.log('Returning');
+                for (var i = 0; i < 5 && !await clickAlong(myPos(), safe_route, false); i++) await sleep(1000);
+                console.log('Returned');
             }
         }
     }
+    // interact with safe randoms if they're meant for you
     var safeRandoms = findNPCs(/Strange Plant|Drunken Dwarf|Genie|Mysterious Old Man/i);
     for (var npc of safeRandoms) {
         console.log('Found', npcName(npc));
         for (var i = 0; i < 5; i++) {
-            if (afterMe(npc)) {
+            if (afterMe(npc) || npcName(npc).match(/Strange Plant/)) {
                 console.log('Solving', npcName(npc));
                 await clickEntity(npc, height=0.5);
                 await sleep(2000);
@@ -741,6 +820,28 @@ async function handleRandoms(killWeakDanger=true) {
             }
         }
     }
+    // pickup dropped pickaxe heads
+    if (await pickupItems([480,482,484,486,488,490])) { 
+        console.log('Found droped pickaxe head');
+        if (heldItem() == 466) {
+            await unequip();
+        }
+        var head = invFind([480,482,484,486,488,490]),
+            handle = invFind(466);
+        if (head !== null && handle !== null) {
+            console.log('Repairing and re-equiping');
+            await clickInv(handle, null, 2);
+            await sleep(500);
+            await clickOption(/Use.*/);
+            await sleep(500);
+            await clickInv(head);
+            await sleep(1000);
+            var pickaxe = invFind([1265,1267,1269,1271,1273,1275]);
+            await clickInv(pickaxe); //equip it
+            await sleep(500);
+        }
+    }
+    
 }
 
 var STOP = false;
@@ -749,15 +850,16 @@ var varrock_east_bank_mine_path = [
     [3254, 3421], //bank 
     [3254, 3428],
     [3261, 3429],
-    [3274, 3429],
-    [3284, 3427],
+    [3270, 3425],
+    [3278, 3425],
+    [3283, 3420],
     [3287, 3416],
     [3290, 3406],
     [3291, 3395],
     [3291, 3385],
     [3290, 3374],
     [3286, 3366] // mine 
-]
+];
 
 var varrock_east_bank_booths = [
     [3252, 3419],
@@ -789,6 +891,7 @@ async function varrockEastMiner() {
         
         var tin = countItem(439),
             copper = countItem(437),
+            iron = countItem(441),
             free = freeSlots(),
             [x, z] = myPos();
         console.log('Copper', copper, 'Tin', tin, 'Free', free);
@@ -812,40 +915,29 @@ async function varrockEastMiner() {
                 continue;
             }
         }
-        var toFind = copper < tin ? [2090, 2091] : [2094, 2095];
+        var toFind = (tin+copper)/4 > iron ? [2092, 2095] : (copper < tin ? [2090, 2091] : [2094, 2095]);
         var objs = findObjects(toFind);
-        var mine = chooseClosest([x,z], objs, nrand=1.1);
+        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
         if (mine !== null) {
-            console.log('Mining', copper < tin ? 'copper' : 'tin', localToGlobal(mine));
+        
+            console.log('Clicking', copper < tin ? 'copper' : 'tin', localToGlobal(mine));
             await clickMS(mine);
+            
+            var anim;
+            for (var i = 0; i < 5; i++) {
+                anim = entityAnim(player());
+                if (anim == 625) break;
+                await sleep(500);
+            }
+            if (anim != 625) continue;
+            console.log('Mining');
             for (var i = 0; i < 30; i++) {
-                if (freeSlots() < free) break;
+                if (entityAnim(player()) != 625) break;
                 console.log('...');
                 await sleep(500);
             }
         }  
     }   
-}
-
-async function pickupItems() {
-    for (var n = 0; n < 5 && freeSlots() > 0; n++) {
-        var locs = findItems(new Set([526,314]));
-        if (locs.length < 1) break;
-        
-        var p = chooseRandom(locs)
-        var xy = localToMS(p);
-        
-        if (xy !== null) {
-            await mouse(xy[0], xy[1], button=2);
-            await sleep(400);
-            var tot = countItems();
-            if (await clickOption(/Take.*(Bones|Feather)/i)) {
-                for (var i = 0; i < 20 && tot == countItems(); i++) {
-                    await sleep(500);
-                }
-            }
-        }
-    }
 }
 
 async function buryBones() {
@@ -857,7 +949,7 @@ async function buryBones() {
             await clickInv(i);
             await sleep(1000);
         }
-        handleRandoms();
+        await handleRandoms();
     }
 }
 
@@ -873,7 +965,7 @@ async function chickenKiller() {
         if (freeSlots() < 1) {
             await buryBones()
         } else {
-            await pickupItems();
+            await pickupItems([526,314], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
         }
         
         var chickens = findNPCs(/Chicken/);
