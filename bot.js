@@ -869,11 +869,11 @@ async function handleRandoms(killWeakDanger=false) {
         }
     }
     // interact with safe randoms if they're meant for you
-    var safeRandoms = findNPCs(/Strange Plant|Drunken Dwarf|Genie|Mysterious Old Man/i);
+    var safeRandoms = findNPCs(/Strange.*Plant|Drunken Dwarf|Genie|Mysterious Old Man/i);
     for (var npc of safeRandoms) {
         console.log('Found', npcName(npc));
         for (var i = 0; i < 5; i++) {
-            if (afterMe(npc) || npcName(npc).match(/Strange Plant/)) {
+            if (afterMe(npc) || npcName(npc).match(/Strange.*Plant/i)) {
                 console.log('Solving', npcName(npc));
                 await clickEntity(npc, height=0.5);
                 await sleep(2000);
