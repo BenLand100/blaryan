@@ -636,32 +636,32 @@ async function openTab(tab) {
     }
     
     if (tab == TAB_COMBAT) { // Combat
-        await mouse(566,211,button=1);
+        await mouse(566,211,1);
     } else if (tab == TAB_STATS) { // Stats
-        await mouse(594,211,button=1);
+        await mouse(594,211,1);
     } else if (tab == 2) { // Quests
-        await mouse(620,211,button=1);
+        await mouse(620,211,1);
     } else if (tab == TAB_INVENTORY) { // Inventory
-        await mouse(658,211,button=1);
+        await mouse(658,211,1);
     } else if (tab == TAB_EQUIPMENT) { // Inventory
-        await mouse(690,211,button=1);
+        await mouse(690,211,1);
     } else if (tab == TAB_RUN) { // Run
-        await mouse(722,511,button=1);
+        await mouse(722,511,1);
     }
 }
 
 async function runOn() {
     await openTab(TAB_RUN);
     await sleep(500);
-    await mouse(630,292);
+    await mouse(630,292,1);
     await sleep(500);
 }
 
 async function logout() {
     if (!ingame()) return true;
-    await mouse(657, 509, button=1);
+    await mouse(657, 509, 1);
     await sleep(500);
-    await mouse(638, 396, button=1);
+    await mouse(638, 396, 1);
     await sleep(1000);
     return !ingame();
 }
@@ -672,26 +672,26 @@ async function login(username=null, password=null) {
         username = USERNAME;
         password = PASSWORD;
     }
-    await mouse(472, 338, button=1);
+    await mouse(472, 338, 1);
     await sleep(500);
-    await mouse(474, 308, button=1);
+    await mouse(474, 308, 1);
     await sleep(500);
-    await mouse(382, 268, button=1);
+    await mouse(382, 268, 1);
     await sleep(500);
     await typetext(username);
     await sleep(500);
-    await mouse(382, 285, button=1);
+    await mouse(382, 285, 1);
     await sleep(500);
     await typetext(password);
     await sleep(500);
-    await mouse(331, 335, button=1);
+    await mouse(331, 335, 1);
     await sleep(500);
     for (var i = 0; i < 5 && !ingame(); i++) {
         await sleep(1000);
     }
     if (ingame()) {
         await sleep(1500);
-        await mouse(457, 97, button=1);
+        await mouse(457, 97, 1);
         await sleep(500);
         await keydown('ArrowUp')
         await sleep(4000);
@@ -709,7 +709,7 @@ async function clickMM(global_x, global_z=null, button=1) {
     }
     var pos = project_mm(global_x, global_z);
     if (pos !== null) {
-        await mouse(pos[0], pos[1], button=button);
+        await mouse(pos[0], pos[1], button);
     }
 }
 
@@ -759,7 +759,7 @@ async function clickMS(x, z=null, height=0.0, button=1) {
     }
     var pos = localToMS(x,z,height=height)
     if (pos !== null) {
-        await mouse(pos[0], pos[1], button=button);
+        await mouse(pos[0], pos[1], button);
     }
 }
 
@@ -768,20 +768,20 @@ async function clickInv(i, j=null, button=1) {
         j = Math.floor(i / 4);
         i = i % 4;
     }
-    await mouse(592 + i*40, 254 + j*35, button=button);
+    await mouse(592 + i*40, 254 + j*35, button);
 }
 
 async function clickEntity(entity, height=0.0, button=1) {
     const pos = entityToMS(entity,height=height);
     if (pos !== null) {
-        await mouse(pos[0], pos[1], button=button);
+        await mouse(pos[0], pos[1], button);
     }
 }
 
 async function clickOption(pattern, button=1) {
     const loc = findOption(pattern);
     if (loc !== null) {
-        await mouse(loc[0],loc[1], button=button)
+        await mouse(loc[0],loc[1], button)
         return true;
     } else {
         return false;
@@ -798,7 +798,7 @@ async function pickupItems(items,name_pattern=/Take.*/i) {
         var xy = localToMS(p);
         
         if (xy !== null) {
-            await mouse(xy[0], xy[1], button=2);
+            await mouse(xy[0], xy[1], 2);
             await sleep(400);
             var tot = countItems();
             if (await clickOption(name_pattern)) {
