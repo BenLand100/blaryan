@@ -789,7 +789,22 @@ async function unequip() {
     await sleep(500);
 }
 
+async function depositAll(except = null) {
+    for (var i = 0; i < 28 && !STOP; i++) {
+        if (invItem(i) > 0 && except !== null && !except.has(invItem(i))) {
+            openTab(TAB_INVENTORY);
+            await sleep(500);
+            await clickInv(i,null,2);
+            await sleep(1000);
+            await clickOption(/Deposit.*All/i);
+            await sleep(1000);
+        }
+    }
+}
+
 async function handleRandoms(killWeakDanger=false) {
+    // Does not handle skill-specific randoms
+
     // run random direction from dangerous randoms
     // would be better w/ pathing checks
     var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem/i);
@@ -836,6 +851,11 @@ async function handleRandoms(killWeakDanger=false) {
             }
         }
     }
+    
+}
+
+var PICKAXES = [1265,1267,1269,1271,1273,1275];
+async function handleLostHead() {
     // pickup dropped pickaxe heads
     if (await pickupItems([480,482,484,486,488,490])) { 
         console.log('Found droped pickaxe head');
@@ -852,12 +872,21 @@ async function handleRandoms(killWeakDanger=false) {
             await sleep(500);
             await clickInv(head);
             await sleep(1000);
-            var pickaxe = invFind([1265,1267,1269,1271,1273,1275]);
+            var pickaxe = invFind(PICKAXES);
             await clickInv(pickaxe); //equip it
             await sleep(500);
         }
     }
-    
+}
+
+var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
+async function handleSmokingRocks() {
+    // smoking rocks
+    while ((await findObjects(SMOKING_ROCKS)).length > 0) {
+        console.log('Smoking rocks!');
+        await clickMM(myPos());
+        await sleep(2000);
+    }
 }
 
 var STOP = false;
@@ -883,19 +912,6 @@ var varrock_east_bank_booths = [
     [3254, 3419]
 ];
 
-async function depositAll() {
-    for (var i = 0; i < 28 && !STOP; i++) {
-        if (invItem(i) > 0) {
-            openTab(TAB_INVENTORY);
-            await sleep(500);
-            await clickInv(i,null,2);
-            await sleep(1000);
-            await clickOption(/Deposit.*All/i);
-            await sleep(1000);
-        }
-    }
-}
-
 async function varrockEastMiner() {
     while (true) {
         if (STOP) return;
@@ -910,7 +926,7 @@ async function varrockEastMiner() {
             iron = countItem(441),
             free = freeSlots(),
             [x, z] = myPos();
-        console.log('Copper', copper, 'Tin', tin, 'Free', free);
+        console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         if (free == 0 || z > 3370) { 
             var tobank = free < 1;
             console.log('Walking to',tobank?'bank':'mine','...');
@@ -919,11 +935,13 @@ async function varrockEastMiner() {
                 if (tobank) {
                     var booth = chooseRandom(varrock_east_bank_booths);
                     console.log('Booth', booth);
+                    await clickMM(booth);
+                    await sleep(3000);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
                         await sleep(2000);
-                        await depositAll();
+                        await depositAll(new Set(PICKAXES));
                     }
                     continue;
                 } 
@@ -931,6 +949,9 @@ async function varrockEastMiner() {
                 continue;
             }
         }
+        
+        await handleLostHead();
+            
         var toFind = (tin+copper)/4 > iron ? [2092, 2095] : (copper < tin ? [2090, 2091] : [2094, 2095]);
         var objs = findObjects(toFind);
         var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
@@ -949,6 +970,7 @@ async function varrockEastMiner() {
             console.log('Mining');
             for (var i = 0; i < 30; i++) {
                 if (entityAnim(player()) != 625) break;
+                await handleSmokingRocks();
                 console.log('...');
                 await sleep(500);
             }
