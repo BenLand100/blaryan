@@ -20,6 +20,9 @@ function entityPos(entity) {
 function entityTargetID(entity) {
     return entity['Pv'];
 }
+function entityAnim(entity) {
+    return entity['PA'];
+}
 
 /** Following comes from this common usage of ['nM']
 for (let i = 0x0; i < this['U3']; i++) {
@@ -239,7 +242,7 @@ function invCount(x, y = null) {
 function countItems() {
     var total = 0;
     var inv_iface = getInterface(3214);
-    for (var i = 0; i < 27; i++) {
+    for (var i = 0; i < 28; i++) {
         total = total + inv_iface['hs'][i];
     }
     return total;
@@ -248,7 +251,7 @@ function countItems() {
 function countItem(item_type) {
     var total = 0;
     var inv_iface = getInterface(3214);
-    for (var i = 0; i < 27; i++) {
+    for (var i = 0; i < 28; i++) {
         if (inv_iface['he'][i] == item_type) {
             total = total + inv_iface['hs'][i];
         }
@@ -281,9 +284,13 @@ function findOption(pattern) {
     const len = document.client['fZ'];
     for (var i = 0; i < len; i++) {
         if (menuOption(i).match(pattern)) {
+            var x_off, y_off, menuArea = document.client['f3'];
+            if (menuArea === 0) x_off = 8, y_off = 11;
+            if (menuArea === 1) x_off = 562,  y_off = 231;
+            if (menuArea === 2) x_off = 22,  y_off = 375;
             return [
-                document.client['mJ'] + document.client['f5'] / 2,
-                document.client['f7'] + (len - i) * 15 + 31 - 8
+                x_off + document.client['mJ'] + document.client['f5'] / 2,
+                y_off + document.client['f7'] + (len - i) * 15 + 31 - 13
             ]
         }
     }
@@ -752,15 +759,15 @@ var varrock_east_bank_mine_path = [
     [3286, 3366] // mine 
 ]
 
-var varrock_east_bankbank_booths = [
+var varrock_east_bank_booths = [
     [3252, 3419],
     [3253, 3419],
     [3254, 3419]
 ];
 
 async function depositAll() {
-    for (var i = 0; i < 28; i++) {
-        while (invItem(i) > 0) {
+    for (var i = 0; i < 28 && !STOP; i++) {
+        if (invItem(i) > 0) {
             openTab(TAB_INVENTORY);
             await sleep(500);
             await clickInv(i,null,2);
@@ -792,11 +799,13 @@ async function varrockEastMiner() {
                 console.log('Arrived');
                 if (tobank) {
                     var booth = chooseRandom(varrock_east_bank_booths);
-                    await clickMS(booth,null,1.0,2);
+                    console.log('Booth', booth);
+                    await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
-                    await clickOption(/.*Use-quickly.*/i)
-                    await sleep(2000);
-                    await depositAll();
+                    if (await clickOption(/.*Use-quickly.*/i)) {
+                        await sleep(2000);
+                        await depositAll();
+                    }
                     continue;
                 } 
             } else {
