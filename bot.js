@@ -51,7 +51,11 @@ Render Info
 ****/
 
 function getScene() {
-    return document.client['Nq']
+    return document.client['Nq'];
+}
+
+function viewportInterfaceID() {
+    return document.client['mO'];
 }
 
 function getTiles() {
@@ -900,6 +904,12 @@ async function depositAll(except = null) {
 
 async function handleRandoms(killWeakDanger=false) {
     // Does not handle skill-specific randoms
+    
+    if (viewportInterfaceID() == 5993) { // post-login window
+        console.log('Clearing login prompt')
+        await mouse(457, 97, 1);
+        await sleep(500);
+    }
 
     // run random direction from dangerous randoms
     // would be better w/ pathing checks
@@ -1031,14 +1041,16 @@ async function faladorWestSmelter() {
             if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
                 console.log('Arrived');
                 if (tobank) {
-                    var booth = chooseRandom(falador_west_bank_booths);
+                    var booth = chooseClosest(myPos(),falador_west_bank_booths);
                     console.log('Booth', booth);
                     await clickMM(booth);
                     await sleep(500);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
-                        await sleep(4000);
+                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                        if (viewportInterfaceID() != 5292) continue;
+                        await sleep(500);
                         await depositAll();
                         for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {      
                             var bpos = await bankFind(itype);
@@ -1147,7 +1159,8 @@ async function varrockEastMiner() {
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
-                        await sleep(2000);
+                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                        if (viewportInterfaceID() != 5292) continue;
                         await depositAll(new Set(PICKAXES));
                         await clickMM(myPos());
                         await sleep(1000);
