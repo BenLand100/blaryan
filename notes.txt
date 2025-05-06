@@ -56,6 +56,7 @@ entity: class
     targetID: entity['Pv'] -- The only thing that's >= 0x8000
     x: entity['x'] -- the + variant of the >> 0x7 in minimapInput (found w/ 0x231 or 561 offset) 
     z: entity['z'] -- the - variant of the >> 0x7 in minimapInput (found w/ 0x231 or 561 offset) 
+    spotanimId: entity['PA'] 
     
 npcType: class/dict
     name

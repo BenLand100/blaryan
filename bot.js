@@ -78,6 +78,10 @@ function ingame() {
     return document.client['YO'];
 }
 
+function flagVisible() {
+    return document.client['v0'] != 0;
+}
+
 function baseX() {
     return document.client['Nk']; 
 }
@@ -670,11 +674,18 @@ async function enter() {
 }
 
 async function waitForAnim(cycles=5) {
+    await sleep(500);
     for (var _ = 0; _ < cycles && myAnim() == -1; _++) await sleep(500);
 }
 
 async function waitForIdle(cycles=30) {
+    await sleep(500);
     for (var _ = 0; _ < cycles && myAnim() != -1; _++) await sleep(500);
+}
+
+async function waitForFlag(cycles=30) {
+    await sleep(500);
+    for (var _ = 0; _ < cycles && flagVisible(); _++) await sleep(500);
 }
 
 async function openTab(tab) {
@@ -1025,7 +1036,6 @@ async function faladorWestSmelter() {
                     //console.log('Booth', booth);
                     await clickMM(booth);
                     await sleep(500);
-                    await waitForIdle(10);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
@@ -1048,7 +1058,7 @@ async function faladorWestSmelter() {
                         }   
                         await clickMM(myPos());
                         await sleep(1000);
-                        await runOn();
+                        if (Math.random() < 0.2) await runOn();
                     }
                     continue;
                 }
@@ -1066,8 +1076,7 @@ async function faladorWestSmelter() {
         }
         if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
             await clickMM([2974, 3369]);
-            await sleep(500);
-            await waitForIdle(10);
+            await waitForFlag();
             continue
         }
         
