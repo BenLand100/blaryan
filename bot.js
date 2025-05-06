@@ -1010,7 +1010,8 @@ var falador_west_bank_booths = [
     [2949, 3367]
 ]
 
-var SMELT_ORES = [['Tin',439,14,1],['Copper',437,14,1]];
+//var SMELT_ORES = [['Tin',439,14,1],['Copper',437,14,1]];
+var SMELT_ORES = [['Iron',441,28,1]];
 
 async function faladorWestSmelter() {
     var ingredients = SMELT_ORES.map(([name,type,count,min]) => type);
@@ -1039,7 +1040,7 @@ async function faladorWestSmelter() {
                     if (await clickOption(/.*Use-quickly.*/i)) {
                         await sleep(4000);
                         await depositAll();
-                        for (var itype of ingredients) {      
+                        for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {      
                             var bpos = await bankFind(itype);
                             if (bpos === null) {
                                 break;
@@ -1048,7 +1049,7 @@ async function faladorWestSmelter() {
                                 await sleep(750);
                                 if (await clickOption(/Withdraw X.*/i)) {
                                     await sleep(1000);
-                                    await typetext('14\n');
+                                    await typetext(String(icount));
                                     await enter();
                                     await sleep(1000);
                                 }
