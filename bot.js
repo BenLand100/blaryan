@@ -1010,9 +1010,10 @@ var falador_west_bank_booths = [
     [2949, 3367]
 ]
 
-var ingredients = [439,437];
+var SMELT_ORES = [['Tin',439,14,1],['Copper',437,14,1]];
 
 async function faladorWestSmelter() {
+    var ingredients = SMELT_ORES.map(([name,type,count,min]) => type);
     while (true) {
         if (STOP) return;
         if (!await login()) {
@@ -1021,30 +1022,27 @@ async function faladorWestSmelter() {
         }
         await handleRandoms();
         
-        var tin = countItem(439),
-            copper = countItem(437),
-            iron = countItem(441),
-            free = freeSlots(),
-            [x, z] = myPos();
-        var tobank = tin == 0 || copper == 0;
+        var free = freeSlots(),
+            [x, z] = myPos(),
+            tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
         if (tobank || x < 2973) { 
-            //console.log('Walking to',tobank?'bank':'mine','...');
+            console.log('Walking to',tobank?'bank':'furnace','...');
             if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
-                //console.log('Arrived');
+                console.log('Arrived');
                 if (tobank) {
                     var booth = chooseRandom(falador_west_bank_booths);
-                    //console.log('Booth', booth);
+                    console.log('Booth', booth);
                     await clickMM(booth);
                     await sleep(500);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
-                        await sleep(2000);
+                        await sleep(4000);
                         await depositAll();
                         for (var itype of ingredients) {      
                             var bpos = await bankFind(itype);
                             if (bpos === null) {
-                                console.log('Out of', itype);
+                                break;
                             } else {
                                 await clickBank(bpos,null,2);
                                 await sleep(750);
@@ -1066,15 +1064,17 @@ async function faladorWestSmelter() {
                 continue;
             }
         }
-        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
         
         if (z >= 3377) { // outside the door
             await clickMS(globalToLocal(2971,3376.5),null,1.0,2);
             await sleep(500);
-            await clickOption(/Open.*/i);
+            if (await clickOption(/Open.*/i)) {
+                console.log('Opened the door!');
+            }
             await sleep(750);
         }
         if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
+            console.log('Headed to smelter...');
             await clickMM([2974, 3369]);
             await waitForFlag();
             continue
