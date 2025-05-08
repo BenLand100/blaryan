@@ -129,15 +129,11 @@ function groundHeight(x, z) {
     var level = currentLevel();        
     var heightmap = document.client['Hf'];
     var tile_flags = document.client['He'];
-    let x_tile = Math.min(x >> 7, 103),
-        z_tile = Math.min(z >> 7, 103);
+    let x_tile = Math.min(x >> 7, 103), z_tile = Math.min(z >> 7, 103);
     if (level < 3 && tile_flags && (tile_flags[1][x_tile][z_tile] & 2) === 2) {
         level = level + 1;
     }
-    let x_fine = x & 127,
-        z_fine = z & 127,
-        y_avg_l = heightmap[level][x_tile][z_tile] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile] * x_fine >> 7,
-        y_avg_r = heightmap[level][x_tile][z_tile + 1] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile + 1] * x_fine >> 7;
+    let x_fine = x & 127, z_fine = z & 127, y_avg_l = heightmap[level][x_tile][z_tile] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile] * x_fine >> 7, y_avg_r = heightmap[level][x_tile][z_tile + 1] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile + 1] * x_fine >> 7;
     return y_avg_l * (128 - z_fine) + y_avg_r * z_fine >> 7;
 }
     
@@ -155,13 +151,7 @@ function minimapYaw() {
        
 function project_ms(x, y, z) { //local coords!
 
-    let x_off = x - document.client['nw'],
-        y_off = y - document.client['n2'],
-        z_off = z - document.client['no'],
-        sin_pitch = document.sincos_cls['oy'][cameraPitch()],
-        cos_pitch = document.sincos_cls['Y3'][cameraPitch()],
-        sin_yaw = document.sincos_cls['oy'][cameraYaw()],
-        cos_yaw = document.sincos_cls['Y3'][cameraYaw()],
+    let x_off = x - document.client['nw'], y_off = y - document.client['n2'], z_off = z - document.client['no'], sin_pitch = document.sincos_cls['oy'][cameraPitch()], cos_pitch = document.sincos_cls['Y3'][cameraPitch()], sin_yaw = document.sincos_cls['oy'][cameraYaw()], cos_yaw = document.sincos_cls['Y3'][cameraYaw()],
       tmp = z_off * sin_yaw + x_off * cos_yaw >> 16;
     z_off = z_off * cos_yaw - x_off * sin_yaw >> 16;
     x_off = tmp;
@@ -181,19 +171,13 @@ function project_ms(x, y, z) { //local coords!
 
 function project_mm(global_x, global_z) { //global coords!
 
-    let [x_char, z_char] = myPos(),
-        zoom = (document.client['vp'] + 256)/256,
-        x_mm = 4 * zoom * (global_x - x_char),
-        z_mm = 4 * zoom * (global_z - z_char),
-        sin_yaw = -document.sincos_cls['oy'][minimapYaw()],
-        cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
+    let [x_char, z_char] = myPos(), zoom = (document.client['vp'] + 256)/256, x_mm = 4 * zoom * (global_x - x_char), z_mm = 4 * zoom * (global_z - z_char), sin_yaw = -document.sincos_cls['oy'][minimapYaw()], cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
       
     if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 70) { //TODO validate
         return null;
     } else {
         return [
-            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
-            (-x_mm * sin_yaw - z_mm * cos_yaw >> 16) + 89
+            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,     (-x_mm * sin_yaw - z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
@@ -335,8 +319,7 @@ function findOption(pattern) {
             if (menuArea === 1) x_off = 562,  y_off = 231;
             if (menuArea === 2) x_off = 22,  y_off = 375;
             return [
-                x_off + document.client['mJ'] + document.client['f5'] / 2,
-                y_off + document.client['f7'] + (len - i) * 15 + 31 - 13
+                x_off + document.client['mJ'] + document.client['f5'] / 2,         y_off + document.client['f7'] + (len - i) * 15 + 31 - 13
             ]
         }
     }
@@ -433,8 +416,7 @@ function localToMS(i, j=null, height=0.0) {
         j = i[1];
         i = i[0];
     }
-    var x = (i << 7) + 64,
-        z = (j << 7) + 64, 
+    var x = (i << 7) + 64, z = (j << 7) + 64, 
         y = groundHeight(x, z) + height * 128;
     return project_ms(x, y, z);
 }
@@ -540,9 +522,7 @@ function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) 
                 var type = (tileLocTypecode(tile,k) >> 14) & 32767;
                 //these may also be interesting 
                 /*
-                b = E & 127,
-                G = E >> 7 & 127,
-                N = E >> 29 & 3
+                b = E & 127,         G = E >> 7 & 127,         N = E >> 29 & 3
                 */
                 if (verbose) {
                     log(localToGlobal(i,j),type,tile);
@@ -675,9 +655,7 @@ async function holdKey(key, code=null, shift=false) {
         code = defaultCode(key);
     }
     canvas.dispatchEvent(new KeyboardEvent("keydown", {
-        key: key,
-        code: code,
-        shiftKey: shift
+        key: key, code: code, shiftKey: shift
     }));
 }
 
@@ -686,9 +664,7 @@ async function releaseKey(key, code=null, shift=false) {
         code = defaultCode(key);
     }
     canvas.dispatchEvent(new KeyboardEvent("keyup", {
-        key: key,
-        code: code,
-        shiftKey: shift
+        key: key, code: code, shiftKey: shift
     }));
 }
 
@@ -855,11 +831,11 @@ async function clickAlong(pos, path, direction) {
     var pnext = direction ? path[inext] : path[path.length-1-inext];
     //log('Closest', inext, 'INext', inext);
     if (iclose+1 >= dists.length && dclose < 3) {
-        await sleep(1500);
+        await waitForFlag();
         return true;
     } else {
         await clickMM(pnext);
-        await sleep(2500);
+        await sleep(2000);
         return false;
     }
 }
@@ -957,7 +933,7 @@ function now() {
 }
 
 function timediff(a,b) {
-    return Math.abs(a.getTime() - b.getTime)/1000;
+    return Math.abs(a.getTime() - b.getTime())/1000;
 }
 
 var STOP = false;
@@ -965,8 +941,8 @@ var WATCHDOG = now();
 
 async function handleRandoms(killWeakDanger=false) {
     // Does not handle skill-specific randoms
-    
-    if (timediff(now(), WATCHDOG) > 10*60) {
+    var watch_time = timediff(now(), WATCHDOG);
+    if (watch_time > 10*60) {
         await logout();
         throw new Error('WATCHDOG timer tripped. Exiting.');
     }
@@ -990,15 +966,9 @@ async function handleRandoms(killWeakDanger=false) {
                     await sleep(2000);
                 }
             } else {
-                var pos = myPos(),
-                    alpha = 2*3.14195*Math.random(),
-                    sin_alpha = Math.sin(alpha),
-                    cos_alpha = Math.cos(alpha),
-                    seg_dist = 8;
+                var pos = myPos(),             alpha = 2*3.14195*Math.random(),             sin_alpha = Math.sin(alpha),             cos_alpha = Math.cos(alpha),             seg_dist = 8;
                 var safe_route = [
-                    [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],
-                    [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],
-                    [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
+                    [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],             [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],             [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
                 ];
                 log('Running from', npcName(npc), safe_route);
                 for (var i = 0; i < 5 && !await clickAlong(myPos(), safe_route, true); i++) await sleep(1000);
@@ -1054,8 +1024,7 @@ async function handleLostHead() {
             await unequip();
         }
         await openTab(TAB_INVENTORY);
-        var head = invFind(PICKAXE_HEADS),
-            handle = invFind(467);
+        var head = invFind(PICKAXE_HEADS),     handle = invFind(467);
         if (head !== null && handle !== null) {
             log('Repairing and re-equiping');
             await clickInv(handle, null, 2);
@@ -1101,15 +1070,14 @@ var SMELT_ORES = [['Iron',441,28,1]];
 
 async function faladorWestSmelter() {
     var ingredients = SMELT_ORES.map(([name,type,count,min]) => type);
+    WATCHDOG = now();
     await login()
     while (true) {
         if (STOP) return;
         await handleLogout();
         await handleRandoms();
         
-        var free = freeSlots(),
-            [x, z] = myPos(),
-            tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
+        var free = freeSlots(),     [x, z] = myPos(),     tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
         if (tobank || x < 2973) { 
             //console.log('Walking to',tobank?'bank':'furnace','...');
             if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
@@ -1187,6 +1155,349 @@ async function faladorWestSmelter() {
     }   
 }
 
+async function makePath() {
+    var pos = myPos();
+    var path = [pos];
+    while (!STOP) {
+        pos = myPos();
+        if (dist(pos,path[path.length-1]) >= 7) {
+            path.push(pos);
+            console.log(path)
+        }
+        await sleep(250)
+    }
+    console.log('Final');
+    console.log(path);
+}
+
+var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
+
+var falador_east_to_mining_guild = [
+    [3013, 3355],
+    [3020, 3359],
+    [3024, 3352],
+    [3028, 3346],
+    [3029, 3339],
+    [3022, 3337]
+]
+
+var out_of_mining_guild = [
+    [3046, 9748],
+    [3042, 9742],
+    [3035, 9740],
+    [3028, 9740],
+    [3021, 9739]
+]
+
+var falador_east_bank_booths = [
+    [3011, 3354],
+    [3012, 3354],
+    [3013, 3354],
+    [3014, 3354],
+    [3015, 3354],
+]
+
+async function walkTowards(x,z=null) {
+    if (z === null) {
+        z = x[1];
+        x = x[0];
+    }
+    var pos = myPos(), dx = x-pos[0], dz = z-pos[1], r = Math.sqrt(dx*dx+dz*dz), step = Math.min(1,12/r);
+    var next_pos = [pos[0] + dx*step, pos[1] + dz*step];
+    await clickMM(next_pos);
+    await waitForFlag();
+}
+
+async function climbLadder(x,z) {
+    if (dist([x, z],myPos()) < 4) {
+        await clickMS(globalToLocal(x, z),null,1.0,2);
+        await sleep(500);
+        if (await clickOption(/.*Climb.*/i)) {
+            await waitForFlag();
+            await sleep(1000);
+            return true;
+        }
+    } else {
+        await walkTowards(x,z);
+    }
+    return false;
+}
+
+async function miningGuildMiner() {
+    WATCHDOG = now();
+    while (true) {
+        if (STOP) return;
+        await handleLogout();
+        await handleRandoms();
+        
+        var mith = countItem(448), coal = countItem(454), free = freeSlots(), [x, z] = myPos();
+        if (free == 0 || z < 4000) { 
+            var tobank = free == 0;
+            //console.log('Walking to',tobank?'bank':'mine','...');
+            var path = z > 5000 ? out_of_mining_guild : falador_east_to_mining_guild;
+            var dir = z > 5000 ? true : !tobank;
+            if (await clickAlong([x,z], path, dir)) {
+                //console.log('Arrived');
+                WATCHDOG = now();
+                if (z < 5000 && tobank) {
+                    var booth = chooseRandom(falador_east_bank_booths);
+                    //console.log('Booth', booth);
+                    await clickMM(booth);
+                    await sleep(3000);
+                    await clickMS(globalToLocal(booth),null,1.0,2);
+                    await sleep(500);
+                    if (await clickOption(/.*Use-quickly.*/i)) {
+                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                        if (viewportInterfaceID() != 5292) continue;
+                        await depositAll(new Set(PICKAXES));
+                        await clickMM(myPos());
+                        await sleep(1000);
+                        if (Math.random() < 0.2) await runOn();
+                        await openTab(TAB_INVENTORY);
+                    }
+                    continue;
+                } else {
+                    if (z < 5000) {
+                        await climbLadder(3020, 3339);
+                    } else {
+                        await climbLadder(3020, 9739);
+                    }
+                }
+            } else {
+                continue;
+            }
+        }
+        
+        await handleLostHead();
+            
+        var toFind = mith*5 < coal ? [2102, 2103] : [2096, 2097]; //mith
+        var objs = findObjects(toFind,false,null,35);
+        objs = objs.filter(pos => localToGlobal(pos)[1] < 9750);
+        //log('mith:',objs.length);
+        if (objs.length == 0) {
+            toFind  = [2096, 2097]; //coal
+            objs = findObjects(toFind,false,null,35)
+            //log('coal:',objs.length);
+        }
+        if (objs.length == 0) {
+            //log('No coal!');
+            await sleep(1500);
+            continue
+        }
+        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+        //log('mining',mine);
+        if (mine !== null) {
+        
+            if (localToMS(mine[0],mine[1]) === null) {
+                //log('walking to rock');
+                await walkTowards(localToGlobal(mine));
+                await waitForFlag();
+                continue;
+            }
+        
+            var [gx,gz] = localToGlobal(mine);
+            
+            await clickMS(mine, null, 0.05, 1, 10.0);
+            await waitForFlag();
+            await waitForAnim(5);
+            if (myAnim() != 628) continue;
+            
+            WATCHDOG = now();
+            await openTab(TAB_INVENTORY);
+            
+            //console.log('Mining');
+            for (var i = 0; i < 60; i++) {
+                if (myAnim() != 628) break;
+                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                    log('Smoking rocks!');
+                    var [x,z] = myPos()
+                    x = x + Math.random()*5-2.5;
+                    z = z + Math.random()*5-2.5;
+                    await clickMM(x,z);
+                    await waitForFlag();
+                    break;
+                }
+                if (!isObjectAt(gx,gz,toFind)) break;
+                //log('...');
+                await sleep(250);
+            }
+            
+        }  
+    }   
+}
+
+var varrock_west_to_falador_west = [
+    [3182, 3439],
+    [3182, 3432],
+    [3175, 3429],
+    [3168, 3427],
+    [3163, 3422],
+    [3156, 3418],
+    [3149, 3417],
+    [3142, 3416],
+    [3135, 3416],
+    [3128, 3415],
+    [3121, 3416],
+    [3114, 3419],
+    [3107, 3420],
+    [3098, 3420],
+    [3091, 3420],
+    [3084, 3418],
+    [3074, 3418],
+    [3067, 3418],
+    [3060, 3413],
+    [3053, 3413],
+    [3040, 3422],
+    [3034, 3426],
+    [3027, 3425],
+    [3020, 3426],
+    [3013, 3430],
+    [3004, 3434],
+    [2997, 3434],
+    [2989, 3429],
+    [2987, 3422],
+    [2975, 3413],
+    [2972, 3406],
+    [2967, 3397],
+    [2964, 3387],
+    [2957, 3383],
+    [2952, 3378],
+    [2945, 3374]
+]
+
+
+var draynor_bank_to_lumby_swamp_mine = [
+    [3093, 3243],
+    [3100, 3245],
+    [3101, 3238],
+    [3107, 3234],
+    [3112, 3229],
+    [3119, 3228],
+    [3124, 3223],
+    [3128, 3220],
+    [3135, 3220],
+    [3140, 3214],
+    [3145, 3208],
+    [3150, 3202],
+    [3155, 3196],
+    [3160, 3191],
+    [3166, 3189],
+    [3173, 3189],
+    [3180, 3187],
+    [3186, 3183],
+    [3192, 3178],
+    [3198, 3174],
+    [3205, 3172],
+    [3212, 3168],
+    [3218, 3164],
+    [3225, 3164],
+    [3232, 3163],
+    [3239, 3163]
+]
+
+var draynor_bank_booths = [
+    [3091, 3442],
+    [3091, 3243],
+    [3091, 3245]
+];
+
+async function lumbySwampMiner() {
+    WATCHDOG = now();
+    while (true) {
+        if (STOP) return;
+        await handleLogout();
+        await handleRandoms();
+        
+        var mith = countItem(448), addy = countItem(450), coal = countItem(454), free = freeSlots(), [x, z] = myPos();
+        if (free == 0 || x < 3232) { 
+            var tobank = free < 1;
+            //console.log('Walking to',tobank?'bank':'mine','...');
+            if (await clickAlong([x,z], draynor_bank_to_lumby_swamp_mine, !tobank)) {
+                //console.log('Arrived');
+                WATCHDOG = now();
+                if (tobank) {
+                    var booth = chooseRandom(draynor_bank_booths);
+                    //console.log('Booth', booth);
+                    await clickMM(booth);
+                    await sleep(3000);
+                    await clickMS(globalToLocal(booth),null,1.0,2);
+                    await sleep(500);
+                    if (await clickOption(/.*Use-quickly.*/i)) {
+                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                        if (viewportInterfaceID() != 5292) continue;
+                        await depositAll(new Set(PICKAXES));
+                        await clickMM(myPos());
+                        await sleep(1000);
+                        if (Math.random() < 0.2) await runOn();
+                        await openTab(TAB_INVENTORY);
+                    }
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        }
+        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
+        
+        await handleLostHead();
+            
+        var toFind = [2102, 2103]; //mith
+        var objs = findObjects(toFind,false,null,35);
+        if (objs.length == 0) {
+            toFind = toFind = [2096, 2097]; //coal
+            objs = findObjects(toFind,false,null,35)
+        }
+        if (objs.length == 0) {
+            toFind = toFind = [2096, 2097]; //coal
+            objs = findObjects(toFind,false,null,35)
+        }
+        if (objs.length == 0) {
+            //log('No coal!');
+            await clickMM(draynor_bank_to_lumby_swamp_mine[draynor_bank_to_lumby_swamp_mine.length-1])
+            continue
+        }
+        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+        //log('mining',mine);
+        if (mine !== null) {
+        
+            if (localToMS(mine[0],mine[1]) === null) {
+                //log('walking to rock');
+                await clickMM(localToGlobal(mine));
+                await waitForFlag();
+                continue;
+            }
+        
+            var [gx,gz] = localToGlobal(mine);
+            
+            await clickMS(mine, null, 0.05, 1, 10.0);
+            await waitForFlag();
+            await waitForAnim(5);
+            if (myAnim() != 628) continue;
+            
+            WATCHDOG = now();
+            await openTab(TAB_INVENTORY);
+            
+            //console.log('Mining');
+            for (var i = 0; i < 60; i++) {
+                if (myAnim() != 628) break;
+                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                    log('Smoking rocks!');
+                    var [x,z] = myPos()
+                    x = x + Math.random()*5-2.5;
+                    z = z + Math.random()*5-2.5;
+                    await clickMM(x,z);
+                    await waitForFlag();
+                    break;
+                }
+                if (!isObjectAt(gx,gz,toFind)) break;
+                //log('...');
+                await sleep(250);
+            }
+            
+        }  
+    }   
+}
+
 var varrock_east_bank_mine_path = [
     [3254, 3421], //bank 
     [3254, 3428],
@@ -1208,19 +1519,14 @@ var varrock_east_bank_booths = [
     [3254, 3419]
 ];
 
-var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
-
 async function varrockEastMiner() {
+    WATCHDOG = now();
     while (true) {
         if (STOP) return;
         await handleLogout();
         await handleRandoms();
         
-        var tin = countItem(439),
-            copper = countItem(437),
-            iron = countItem(441),
-            free = freeSlots(),
-            [x, z] = myPos();
+        var tin = countItem(439),     copper = countItem(437),     iron = countItem(441),     free = freeSlots(),     [x, z] = myPos();
         if (free == 0 || z > 3370) { 
             var tobank = free < 1;
             //console.log('Walking to',tobank?'bank':'mine','...');
@@ -1269,21 +1575,17 @@ async function varrockEastMiner() {
         if (mine !== null) {
             var [gx,gz] = localToGlobal(mine);
             
-            await clickMS(mine);
+            await clickMS(mine, null, 0.05, 1, 10.0);
+            await waitForFlag();
+            await waitForAnim(5);
+            if (myAnim() != 628) continue;
             
-            var anim;
-            for (var i = 0; i < 14; i++) {
-                anim = entityAnim(player());
-                if (anim == 625) break;
-                await sleep(250);
-            }
-            if (anim != 625) continue;
             WATCHDOG = now();
             await openTab(TAB_INVENTORY);
             
-            //console.log('Mining');
+            console.log('Mining');
             for (var i = 0; i < 60; i++) {
-                if (entityAnim(player()) != 625) break;
+                if (myAnim() != 625) break;
                 if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
                     log('Smoking rocks!');
                     var [x,z] = myPos()
@@ -1298,7 +1600,6 @@ async function varrockEastMiner() {
                 await sleep(250);
             }
             
-            if (freeSlots() == 0) log('Inventory full')
         }  
     }   
 }
@@ -1359,4 +1660,4 @@ async function chickenKiller() {
     }
 }
 
-varrockEastMiner().then(() => { log("Done") });
+miningGuildMiner().then(() => { log("Done") });
