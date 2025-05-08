@@ -110,7 +110,7 @@ function currentLevel() {
     return document.client['v1']
 }
 
-function ground_items(i, j) {
+function groundItems(i, j) {
     var ll = document.client['Up'][currentLevel()][i][j];
     if (ll == null) {
         return [];
@@ -119,7 +119,7 @@ function ground_items(i, j) {
     var cur = sentinel['next']
     var result = [];
     while (cur !== sentinel) {
-        result.push({'id':cur['lL'], "count":cur['le']})
+        result.push({'id':cur['lL']+1, "count":cur['le']})
         cur = cur['next']
     }
     return result;
@@ -347,6 +347,10 @@ function findOption(pattern) {
 HELPERS
 ************************/
 
+function log(...args) {
+    console.log(new Date().toUTCString(),...args);
+}
+
 function startMouseEcho() {
     canvas.addEventListener("mousemove", (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -373,22 +377,22 @@ function startMouseEcho() {
 
 
 function dumpNPCs() {
-    console.log('NPCs');
+    log('NPCs');
     for (var i = 0; i < totalNPCs(); i++) {
         var npc = getNPC(i);
         if (npc != null) {
-            console.log(npcName(npc), entityX(npc), entityZ(npc), npc);
+            log(npcName(npc), entityX(npc), entityZ(npc), npc);
         }
     }
 }
 
 function dumpItems() {
-    console.log('Items');
+    log('Items');
     for (var i = 0; i < 104; i++) {
         for (var j = 0; j < 104; j++) {
-            item_list = ground_items(i,j);
+            item_list = groundItems(i,j);
             if (item_list.length > 0) {
-                console.log(i,j,item_list);
+                log(localToGlobal(i,j),item_list);
             }
         }
     }
@@ -477,7 +481,7 @@ function findItems(items, visible=true, nearby=null, delta=20) {
     var [x,z] = entityToLocal(player());
     for (var i = Math.max(x-delta,0); i < Math.min(x+delta+1,104); i++) {
         for (var j = Math.max(z-delta,0); j < Math.min(z+delta+1,104); j++) {
-            for (const item of ground_items(i, j)) {
+            for (const item of groundItems(i, j)) {
                 if (items.has(item['id'])) {
                     var p = [i*128+64, j*128+64]
                     if (visible && localToMS(i, j) == null) continue;
@@ -541,7 +545,7 @@ function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) 
                 N = E >> 29 & 3
                 */
                 if (verbose) {
-                    console.log(i,j,k,type,localToGlobal(i,j),tile);
+                    log(localToGlobal(i,j),type,tile);
                 }
                 if (types.has(type)) {
                     if (visible && localToMS(i, j) == null) continue;
@@ -568,7 +572,7 @@ function findWalls(types, visible=false, nearby=null, delta=20, verbose=false) {
             var tile = tiles[i][j];
             var type = (tileWallTypecode(tile) >> 14) & 32767;
             if (verbose) {
-                console.log(i,j,type,localToGlobal(i,j),tile);
+                console.log(localToGlobal(i,j), type, tile);
             }
             if (types.has(type)) {
                 if (visible && localToMS(i, j) == null) continue;
@@ -1023,7 +1027,7 @@ var PICKAXES = [1266,1268,1270,1272,1274,1276];
 var PICKAXE_HEADS = [481,483,485,487,489,491];
 async function handleLostHead() {
     // pickup dropped pickaxe heads
-    if ((await pickupItems(PICKAXE_HEADS.map(x => x-1))) || (await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
+    if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
         console.log('Found droped pickaxe head');
         if (heldItem() == 467) {
             await unequip();
