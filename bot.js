@@ -74,6 +74,10 @@ function tileLocTypecode(tile, i) {
     return tile['tu'][i]['tk']
 }
 
+function tileWallTypecode(tile) {
+    return tile['tC'] === null ? null : tile['tC']['tk'];
+}
+
 /****
 World Info
 ****/
@@ -394,6 +398,10 @@ function dumpObjects() {
     findObjects(0, true, null, 1, true);
 }
 
+function dumpWalls() {
+    findWalls(0, true, null, 1, true);
+}
+
 function entityToLocal(entity) {
     var pos = entityPos(entity);
     if (pos === null) return pos;
@@ -499,6 +507,19 @@ function isObjectAt(global_x, global_z, types) {
     return false;
 }
 
+function isWallAt(global_x, global_z, types) {
+    var [i,j] = globalToLocal(global_x, global_z);
+    if (i < 0 || j < 0 || i > 103 || j > 103) return false;
+    if (Number.isInteger(types)) {
+        types = new Set([types]);
+    } else {
+        types = new Set(types);
+    }
+    var tile = getTiles()[currentLevel()][i][j];
+    var type = (tileWallTypecode(tile) >> 14) & 32767;
+    return types.has(type);
+}
+
 function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) {
     if (Number.isInteger(types)) {
         types = new Set([types]);
@@ -523,7 +544,6 @@ function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) 
                     console.log(i,j,k,type,localToGlobal(i,j),tile);
                 }
                 if (types.has(type)) {
-                    var p = [i*128+64, j*128+64]
                     if (visible && localToMS(i, j) == null) continue;
                     if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
                     locs.push([i, j]);
@@ -532,6 +552,32 @@ function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) 
         }
     }
     return locs;
+}
+
+function findWalls(types, visible=false, nearby=null, delta=20, verbose=false) {
+    if (Number.isInteger(types)) {
+        types = new Set([types]);
+    } else {
+        types = new Set(types);
+    }
+    var walls = [];
+    var [x,z] = entityToLocal(player());
+    var tiles = getTiles()[currentLevel()];
+    for (var i = Math.max(x-delta,0); i < Math.min(x+delta+1,104); i++) {
+        for (var j = Math.max(z-delta,0); j < Math.min(z+delta+1,104); j++) {
+            var tile = tiles[i][j];
+            var type = (tileWallTypecode(tile) >> 14) & 32767;
+            if (verbose) {
+                console.log(i,j,type,localToGlobal(i,j),tile);
+            }
+            if (types.has(type)) {
+                if (visible && localToMS(i, j) == null) continue;
+                if (nearby !== null && e2tDist(player(), i, j) > nearby) continue;
+                walls.push([i, j]);
+            }
+        }
+    }
+    return walls;
 }
 
 function shuffle(array) {
@@ -890,7 +936,7 @@ async function unequip() {
 }
 
 async function depositAll(except = null) {
-    for (var i = 0; i < 28 && !STOP; i++) {
+    for (var i = 0; i < 28 && !STOP && viewportInterfaceID() == 5292; i++) {
         if (invItem(i) > 0 && (except === null || !except.has(invItem(i)))) {
             await openTab(TAB_INVENTORY);
             await sleep(500);
@@ -977,7 +1023,7 @@ var PICKAXES = [1266,1268,1270,1272,1274,1276];
 var PICKAXE_HEADS = [481,483,485,487,489,491];
 async function handleLostHead() {
     // pickup dropped pickaxe heads
-    if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
+    if ((await pickupItems(PICKAXE_HEADS.map(x => x-1))) || (await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
         console.log('Found droped pickaxe head');
         if (heldItem() == 467) {
             await unequip();
@@ -1000,6 +1046,13 @@ async function handleLostHead() {
     }
 }
 
+async function handleLogout() {
+    for (var i = 0; i < 10 && !ingame(); i++) await sleep(1000);
+    if (!ingame()) {
+        console.log('Timed out... logging back in.');
+        await login();
+    }
+}
 
 var STOP = false;
   
@@ -1025,31 +1078,31 @@ var SMELT_ORES = [['Iron',441,28,1]];
 
 async function faladorWestSmelter() {
     var ingredients = SMELT_ORES.map(([name,type,count,min]) => type);
+    await login()
     while (true) {
         if (STOP) return;
-        if (!await login()) {
-            console.log('Can\'t login; bailing out!');
-            return;
-        }
+        await handleLogout();
         await handleRandoms();
         
         var free = freeSlots(),
             [x, z] = myPos(),
             tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
         if (tobank || x < 2973) { 
-            console.log('Walking to',tobank?'bank':'furnace','...');
+            //console.log('Walking to',tobank?'bank':'furnace','...');
             if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
-                console.log('Arrived');
+                //console.log(new Date().getTime(), 'Arrived');
                 if (tobank) {
                     var booth = chooseClosest(myPos(),falador_west_bank_booths);
-                    console.log('Booth', booth);
+                    //console.log(new Date().getTime(),'Booth', booth);
                     await clickMM(booth);
                     await sleep(500);
                     await clickMS(globalToLocal(booth),null,1.0,2);
                     await sleep(500);
                     if (await clickOption(/.*Use-quickly.*/i)) {
+                        //console.log(new Date().getTime(),'Used booth...');
                         for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
                         if (viewportInterfaceID() != 5292) continue;
+                        //console.log(new Date().getTime(),'In bank!');
                         await sleep(500);
                         await depositAll();
                         for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {      
@@ -1078,8 +1131,8 @@ async function faladorWestSmelter() {
             }
         }
         
-        if (z >= 3377) { // outside the door
-            await clickMS(globalToLocal(2971,3376.5),null,1.0,2);
+        if (z >= 3377 && !isWallAt(2971, 3376, 1531)) { // outside the door
+            await clickMS(globalToLocal(2971,3377.5),null,1.0,2);
             await sleep(500);
             if (await clickOption(/Open.*/i)) {
                 console.log('Opened the door!');
@@ -1087,7 +1140,7 @@ async function faladorWestSmelter() {
             await sleep(750);
         }
         if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
-            console.log('Headed to smelter...');
+            //console.log('Headed to smelter...');
             await clickMM([2974, 3369]);
             await waitForFlag();
             continue
@@ -1135,10 +1188,7 @@ var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130
 async function varrockEastMiner() {
     while (true) {
         if (STOP) return;
-        if (!await login()) {
-            console.log('Can\'t login; bailing out!');
-            return;
-        }
+        await handleLogout();
         await handleRandoms();
         
         var tin = countItem(439),
@@ -1165,6 +1215,7 @@ async function varrockEastMiner() {
                         await clickMM(myPos());
                         await sleep(1000);
                         await runOn();
+                        await openTab(TAB_INVENTORY);
                     }
                     continue;
                 }
@@ -1274,4 +1325,4 @@ async function chickenKiller() {
     }
 }
 
-faladorWestSmelter().then(() => { console.log("Done") });
+varrockEastMiner().then(() => { console.log("Done") });
