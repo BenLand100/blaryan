@@ -67,15 +67,15 @@ function getTiles() {
 }
 
 function tileLocCount(tile) {
-    return tile['tz']
+    return tile !== null ? tile['tz'] : null;
 }
 
 function tileLocTypecode(tile, i) {
-    return tile['tu'][i]['tk']
+    return tile !== null ? tile['tu'][i]['tk'] : null;
 }
 
 function tileWallTypecode(tile) {
-    return tile['tC'] === null ? null : tile['tC']['tk'];
+    return tile !== null ? (tile['tC'] === null ? null : tile['tC']['tk']) : null;
 }
 
 /****
@@ -1262,6 +1262,7 @@ async function miningGuildMiner() {
                     } else {
                         await climbLadder(3020, 9739);
                     }
+                    continue;
                 }
             } else {
                 continue;
