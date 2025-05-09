@@ -612,8 +612,8 @@ function chooseRandom(choices, n = 1) {
 ROUTINES
 ************************/
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function sleep(ms, exact=false) {
+  return new Promise(resolve => setTimeout(resolve, exact ? ms : Math.floor(ms + Math.random()*Math.sqrt(ms))));
 }
 
 MOUSE_NONE = 0
@@ -962,7 +962,7 @@ async function handleRandoms(killWeakDanger=false) {
 
     // run random direction from dangerous randoms
     // would be better w/ pathing checks
-    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem|Strange.*Plant/i);
+    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem|Strange.*Plant|Tree.*spirit/i);
     for (var npc of dangerRandoms) {
         if (afterMe(npc)) {
             if (killWeakDanger && npcName(npc).match(/Swarm/)) {
@@ -1133,13 +1133,13 @@ async function varrockWestChopper() {
 
     await handleLogout();
     await handleRandoms();
-    await handleLostHatchetHead()
+    await handleLostHatchetHead();
 
     var free = freeSlots(),
         [x, z] = myPos(),
         tobank = free == 0;
     if (tobank) {
-        log('Walking to',tobank?'bank':'forest','...');
+        //log('Walking to',tobank?'bank':'forest','...');
         await walkTowards([3183, 3436]);
         if (dist(myPos(),[3183, 3436]) < 3) {
             WATCHDOG = now();
@@ -1159,14 +1159,17 @@ async function varrockWestChopper() {
                 await depositAll();
                 await clickMM(myPos());
                 await sleep(1000);
-                if (Math.random() < 0.2) await runOn();
+                if (Math.random() < 0.2)  {
+                    await runOn();
+                    await openTab(TAB_INVENTORY);
+                }
             }
             return;
         } else {
             return;
         }
     }
-    log('Searching for trees');
+    //log('Searching for trees');
     //var tree_ids = [1276, 1277, 1278, 1279];
     var tree_ids = [1281];
     var trees = findObjects(tree_ids,false,null,35).filter( pos => {
@@ -1185,26 +1188,34 @@ async function varrockWestChopper() {
     var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
         pos = tileLocPos(tile,0),
         fake_entity = {"x": pos[0]+128*Math.random()-64, "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()-64};
-    log(tree, localToGlobal(tree), entityToMS(fake_entity,1.0));
     if (entityToMS(fake_entity,1.0) === null) {
-        log('Walking to tree', gtree);
+        //log('Walking to tree', gtree);
         await walkTowards(gtree);
         await sleep(1500);
     } else {
-        log('Chopping tree');
+        //log('Chopping tree');
         await clickEntity(fake_entity,1.5,2);
         await sleep(500);
         if (await clickOption(/Chop.*/i)) {
-            log('Hit tree', gtree);
+            //log('Hit tree', gtree);
             await waitForFlag();
             await waitForAnim(5);
             if (myAnim() != 877) return;
             WATCHDOG = now();
-            for (var _ = 0; _ < 30 && myAnim() == 877; _++) {
+            for (var _ = 0; _ < 120 && myAnim() == 877; _++) {
+                if (!isObjectAt(gtree[0],gtree[1],tree_ids)) {
+                    log('Found Ent!!!');
+                    await clickMM(myPos());
+                    break;
+                }
+                if (freeSlots() == 0) break;
+                await handleLogout();
+                await handleRandoms();
+                await handleLostHatchetHead();
                 await sleep(500);
             }
         } else {
-            log('Missed tree', gtree);
+            //log('Missed tree', gtree);
             await sleep(500);
             await walkTowards(gtree);
             await waitForFlag();
@@ -1243,7 +1254,10 @@ async function draynorChopper() {
                 await depositAll();
                 await clickMM(myPos());
                 await sleep(1000);
-                if (Math.random() < 0.2) await runOn();
+                if (Math.random() < 0.2)  {
+                    await runOn();
+                    await openTab(TAB_INVENTORY);
+                }
             }
             return;
         } else {
@@ -1274,16 +1288,20 @@ async function draynorChopper() {
             await waitForAnim(5);
             if (myAnim() != 879) return;
             WATCHDOG = now();
-            for (var _ = 0; _ < 30 && myAnim() == 879; _++) {
-                if (findNPC(/Ent/i,false,5)) {
+            for (var _ = 0; _ < 120 && myAnim() == 879; _++) {
+                if (!isObjectAt(gtree[0],gtree[1],tree_ids)) {
                     log('Found Ent!!!');
                     await clickMM(myPos());
                     break;
                 }
+                if (freeSlots() == 0) break;
+                await handleLogout();
+                await handleRandoms();
+                await handleLostHatchetHead();
                 await sleep(500);
             }
         } else {
-            log('Missed tree', gtree);
+            //log('Missed tree', gtree);
             await sleep(500);
             await walkTowards(gtree);
             await waitForFlag();
