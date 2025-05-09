@@ -1764,11 +1764,11 @@ async function cowKiller() {
         mobs.filter(m => entityTargetID(m) == -1);
         if (mobs.length < 1) {
             //log('going long');
-            mobs = findNPCs(/Cow/i,false,35);
+            mobs = findNPCs(/Cow/i,false,50);
         }
         if (mobs.length < 1) {
             log('No mobs');
-            await sleep(1000);
+            await sleep(5000);
             continue;
         }
         
@@ -1780,10 +1780,10 @@ async function cowKiller() {
             continue;
         }
         
-        for (var i = 0; i < 10; i++) {
+        for (var i = 0; i < 8; i++) {
             target = entityTargetID(player());
             if (target != -1) break;
-            await sleep(500);
+            await sleep(250);
         }
         if (target == -1) continue;
         
