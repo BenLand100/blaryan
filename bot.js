@@ -1027,7 +1027,7 @@ async function handleRandoms(killWeakDanger=false) {
 }
 
 var PICKAXES = [1266,1268,1270,1272,1274,1276];
-var PICKAXE_HEADS = [481,483,485,487,489,491];
+var PICKAXE_HEADS = [479,481,483,485,487,489,491];
 async function handleLostHead() {
     // pickup dropped pickaxe heads
     var head = findItems(PICKAXE_HEADS,false,null,35);
@@ -1051,6 +1051,37 @@ async function handleLostHead() {
             await clickInv(head);
             await sleep(1000);
             var pickaxe = invFind(PICKAXES);
+            await clickInv(pickaxe); //equip it
+            await sleep(500);
+        }
+    }
+}
+
+var HATCHETS = [1348,1350,1252,1354,1356,1358,1360];
+var HATCHET_HEADS = [509,511,513,515,517,519,521];
+async function handleLostHatchetHead() {
+    // pickup dropped hatchet heads
+    var head = findItems(HATCHET_HEADS,false,null,35);
+    if (head.length > 0) {
+        await clickMM(localToGlobal(head[0]));
+        await waitForFlag();
+    }
+    if ((await pickupItems(HATCHET_HEADS)) || invFind(HATCHET_HEADS) !== null) {
+        log('Found droped pickaxe head');
+        if (heldItem() == 493) {
+            await unequip();
+        }
+        await openTab(TAB_INVENTORY);
+        var head = invFind(HATCHET_HEADS),     handle = invFind(493);
+        if (head !== null && handle !== null) {
+            log('Repairing and re-equiping');
+            await clickInv(handle, null, 2);
+            await sleep(500);
+            await clickOption(/Use.*/);
+            await sleep(500);
+            await clickInv(head);
+            await sleep(1000);
+            var pickaxe = invFind(HATCHETS);
             await clickInv(pickaxe); //equip it
             await sleep(500);
         }
@@ -1091,10 +1122,102 @@ async function walkTowards(x,z=null) {
     await waitForFlag();
 }
 
+var varrock_west_bank_booths = [
+    [3186, 3436],
+    [3186, 3438],
+    [3186, 3440],
+    [3186, 3442]
+];
+
+async function varrockWestChopper() {
+
+    await handleLogout();
+    await handleRandoms();
+    await handleLostHatchetHead()
+
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = free == 0;
+    if (tobank) {
+        log('Walking to',tobank?'bank':'forest','...');
+        await walkTowards([3183, 3436]);
+        if (dist(myPos(),[3183, 3436]) < 3) {
+            WATCHDOG = now();
+            //console.log(new Date().getTime(), 'Arrived');
+            var booth = chooseClosest(myPos(),varrock_west_bank_booths);
+            //console.log(new Date().getTime(),'Booth', booth);
+            await clickMM(booth);
+            await sleep(500);
+            await clickMS(globalToLocal(booth),null,1.0,2);
+            await sleep(500);
+            if (await clickOption(/.*Use-quickly.*/i)) {
+                //console.log(new Date().getTime(),'Used booth...');
+                for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                if (viewportInterfaceID() != 5292) return;
+                //console.log(new Date().getTime(),'In bank!');
+                await sleep(500);
+                await depositAll();
+                await clickMM(myPos());
+                await sleep(1000);
+                if (Math.random() < 0.2) await runOn();
+            }
+            return;
+        } else {
+            return;
+        }
+    }
+    log('Searching for trees');
+    //var tree_ids = [1276, 1277, 1278, 1279];
+    var tree_ids = [1281];
+    var trees = findObjects(tree_ids,false,null,35).filter( pos => {
+        var gpos = localToGlobal(pos); 
+        return gpos[0] <= 3190 && gpos[1] <= 3446;
+    });
+    var barycenter = [(3183*1+x*1)/2, (3436*1+z*1)/2];
+    if (trees.length == 0) {
+        log('No trees!');
+        await sleep(4000);
+        return;
+    } 
+    var tree = chooseClosest(globalToLocal(barycenter), trees, 1.2),
+        gtree = localToGlobal(tree);
+
+    var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
+        pos = tileLocPos(tile,0),
+        fake_entity = {"x": pos[0]+128*Math.random()-64, "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()-64};
+    log(tree, localToGlobal(tree), entityToMS(fake_entity,1.0));
+    if (entityToMS(fake_entity,1.0) === null) {
+        log('Walking to tree', gtree);
+        await walkTowards(gtree);
+        await sleep(1500);
+    } else {
+        log('Chopping tree');
+        await clickEntity(fake_entity,1.5,2);
+        await sleep(500);
+        if (await clickOption(/Chop.*/i)) {
+            log('Hit tree', gtree);
+            await waitForFlag();
+            await waitForAnim(5);
+            if (myAnim() != 877) return;
+            WATCHDOG = now();
+            for (var _ = 0; _ < 30 && myAnim() == 877; _++) {
+                await sleep(500);
+            }
+        } else {
+            log('Missed tree', gtree);
+            await sleep(500);
+            await walkTowards(gtree);
+            await waitForFlag();
+        }
+    }
+}
+
+
 async function draynorChopper() {
 
     await handleLogout();
     await handleRandoms();
+    await handleLostHatchetHead()
 
     var free = freeSlots(),
         [x, z] = myPos(),
@@ -1145,13 +1268,18 @@ async function draynorChopper() {
     } else {
         log('Chopping tree');
         await clickEntity(fake_entity,1.5,2);
-        await sleep(500);
+        await sleep(750);
         if (await clickOption(/Chop.*/i)) {
             await waitForFlag();
             await waitForAnim(5);
             if (myAnim() != 879) return;
             WATCHDOG = now();
             for (var _ = 0; _ < 30 && myAnim() == 879; _++) {
+                if (findNPC(/Ent/i,false,5)) {
+                    log('Found Ent!!!');
+                    await clickMM(myPos());
+                    break;
+                }
                 await sleep(500);
             }
         } else {
@@ -1804,7 +1932,7 @@ async function mainLoop() {
     WATCHDOG = now();
     log('Starting');
     while (!STOP) {
-        await cowKiller();
+        await varrockWestChopper();
     }
 }
 
