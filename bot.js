@@ -9,10 +9,10 @@ function playerID() {
     return document.client['UB'];
 }
 function entityX(entity) {
-    return entity['x']; 
+    return entity['x'];
 }
 function entityZ(entity) {
-    return entity['z']; 
+    return entity['z'];
 }
 function entityPos(entity) {
     return [entityX(entity), entityZ(entity)]
@@ -95,11 +95,11 @@ function flagVisible() {
 }
 
 function baseX() {
-    return document.client['Nk']; 
+    return document.client['Nk'];
 }
 
 function baseZ() {
-    return document.client['va']; 
+    return document.client['va'];
 }
 
 function myPos() {
@@ -119,7 +119,7 @@ function groundItems(i, j) {
     if (ll == null) {
         return [];
     }
-    var sentinel = ll['q']; 
+    var sentinel = ll['q'];
     var cur = sentinel['next']
     var result = [];
     while (cur !== sentinel) {
@@ -130,7 +130,7 @@ function groundItems(i, j) {
 }
 
 function groundHeight(x, z) {
-    var level = currentLevel();        
+    var level = currentLevel();
     var heightmap = document.client['Hf'];
     var tile_flags = document.client['He'];
     let x_tile = Math.min(x >> 7, 103), z_tile = Math.min(z >> 7, 103);
@@ -140,19 +140,19 @@ function groundHeight(x, z) {
     let x_fine = x & 127, z_fine = z & 127, y_avg_l = heightmap[level][x_tile][z_tile] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile] * x_fine >> 7, y_avg_r = heightmap[level][x_tile][z_tile + 1] * (128 - x_fine) + heightmap[level][x_tile + 1][z_tile + 1] * x_fine >> 7;
     return y_avg_l * (128 - z_fine) + y_avg_r * z_fine >> 7;
 }
-    
+
 function cameraPitch() {
     return document.client['Ns'];
 }
-  
+
 function cameraYaw() {
     return document.client['vZ'];
 }
-       
+
 function minimapYaw() {
     return (cameraYaw() + document.client['vI']) & 2047;
 }
-       
+
 function project_ms(x, y, z) { //local coords!
 
     let x_off = x - document.client['nw'], y_off = y - document.client['n2'], z_off = z - document.client['no'], sin_pitch = document.sincos_cls['oy'][cameraPitch()], cos_pitch = document.sincos_cls['Y3'][cameraPitch()], sin_yaw = document.sincos_cls['oy'][cameraYaw()], cos_yaw = document.sincos_cls['Y3'][cameraYaw()],
@@ -162,9 +162,9 @@ function project_ms(x, y, z) { //local coords!
       tmp = y_off * cos_pitch - z_off * sin_pitch >> 16;
     z_off = y_off * sin_pitch + z_off * cos_pitch >> 16;
     y_off = tmp;
-    
+
     if (z_off >= 0x32) {
-        x = document.sincos_cls['YY'] + ((x_off << 0x9) / z_off | 0x0) + 8, 
+        x = document.sincos_cls['YY'] + ((x_off << 0x9) / z_off | 0x0) + 8,
         y = document.sincos_cls['Y5'] + ((y_off << 0x9) / z_off | 0x0) + 10
         if (x > 8 && y > 10 && x < 517 && y < 345) {
             return [x, y];
@@ -176,12 +176,13 @@ function project_ms(x, y, z) { //local coords!
 function project_mm(global_x, global_z) { //global coords!
 
     let [x_char, z_char] = myPos(), zoom = (document.client['vp'] + 256)/256, x_mm = 4 * zoom * (global_x - x_char), z_mm = 4 * zoom * (global_z - z_char), sin_yaw = -document.sincos_cls['oy'][minimapYaw()], cos_yaw = document.sincos_cls['Y3'][minimapYaw()];
-      
+
     if (Math.sqrt(x_mm*x_mm + z_mm*z_mm) > 70) { //TODO validate
         return null;
     } else {
         return [
-            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,     (-x_mm * sin_yaw - z_mm * cos_yaw >> 16) + 89
+            (x_mm * cos_yaw - z_mm * sin_yaw >> 16) + 656,
+            (-x_mm * sin_yaw - z_mm * cos_yaw >> 16) + 89
         ];
     }
 }
@@ -218,7 +219,7 @@ function bankCount(idx) {
     return inv_iface['hs'][idx]
 }
 
-function bankFind(items) {    
+function bankFind(items) {
     if (Number.isInteger(items)) {
         items = new Set([items]);
     } else {
@@ -258,7 +259,7 @@ function invCount(x, y = null) {
     return inv_iface['hs'][idx]
 }
 
-function invFind(items) {    
+function invFind(items) {
     if (Number.isInteger(items)) {
         items = new Set([items]);
     } else {
@@ -323,7 +324,8 @@ function findOption(pattern) {
             if (menuArea === 1) x_off = 562,  y_off = 231;
             if (menuArea === 2) x_off = 22,  y_off = 375;
             return [
-                x_off + document.client['mJ'] + document.client['f5'] / 2,         y_off + document.client['f7'] + (len - i) * 15 + 31 - 13
+                x_off + document.client['mJ'] + document.client['f5'] / 2,
+                y_off + document.client['f7'] + (len - i) * 15 + 31 - 13
             ]
         }
     }
@@ -343,17 +345,17 @@ function startMouseEcho() {
         const rect = canvas.getBoundingClientRect();
         console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
     });
-    
+
     canvas.addEventListener("mouseup", (event) => {
         const rect = canvas.getBoundingClientRect();
         console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
     });
-    
+
     canvas.addEventListener("mousedown", (event) => {
         const rect = canvas.getBoundingClientRect();
         console.log('mousedown',Math.floor(event.clientX - rect.left), event.clientY - rect.top);
     });
-    
+
     canvas.addEventListener("keydown", (event) => {
         console.log(event);
     })
@@ -420,7 +422,7 @@ function localToMS(i, j=null, height=0.0) {
         j = i[1];
         i = i[0];
     }
-    var x = (i << 7) + 64, z = (j << 7) + 64, 
+    var x = (i << 7) + 64, z = (j << 7) + 64,
         y = groundHeight(x, z) - height * 128;
     return project_ms(x, y, z);
 }
@@ -524,9 +526,11 @@ function findObjects(types, visible=true, nearby=null, delta=20, verbose=false) 
             var tile = tiles[i][j];
             for (var k = 0; k < tileLocCount(tile); k++) {
                 var type = (tileLocTypecode(tile,k) >> 14) & 32767;
-                //these may also be interesting 
+                //these may also be interesting
                 /*
-                b = E & 127,         G = E >> 7 & 127,         N = E >> 29 & 3
+                 b = E & 127,
+                 G = E >> 7 & 127,
+                 N = E >> 29 & 3
                 */
                 if (verbose) {
                     log(localToGlobal(i,j),type,tile);
@@ -726,7 +730,7 @@ async function openTab(tab) {
     if (tab == currentTab()) {
         return;
     }
-    
+
     if (tab == TAB_COMBAT) { // Combat
         await mouse(566,211,1);
     } else if (tab == TAB_STATS) { // Stats
@@ -808,7 +812,7 @@ async function clickMM(global_x, global_z=null, button=1, rand=2) {
 async function clickAlong(pos, path, direction) {
     var dists = path.map(x => { return dist(pos, x) });
     if (!direction) dists.reverse();
-    
+
     /*
     //this tried to click the point after the closest point
     var iclose = 0, dclose = dists[0];
@@ -820,7 +824,7 @@ async function clickAlong(pos, path, direction) {
     }
     var inext = Math.min(iclose+1, dists.length-1);
     */
-    
+
     var inext = 0, iclose = 0, dclose = dists[0];
     for (var i = 1; i < dists.length; i++) {
         if (dists[i] < dclose) {
@@ -831,7 +835,7 @@ async function clickAlong(pos, path, direction) {
             inext = i;
         }
     }
-    
+
     var pnext = direction ? path[inext] : path[path.length-1-inext];
     //log('Closest', inext, 'INext', inext);
     if (iclose+1 >= dists.length && dclose < 3) {
@@ -895,10 +899,10 @@ async function pickupItems(items,name_pattern=/Take.*/i) {
     for (var n = 0; n < 5 && freeSlots() > 0; n++) {
         var locs = findItems(set);
         if (locs.length < 1) break;
-        
+
         var p = chooseRandom(locs)
         var xy = localToMS(p);
-        
+
         if (xy !== null) {
             await mouse(xy[0], xy[1], 2);
             await sleep(400);
@@ -942,9 +946,6 @@ function timediff(a,b) {
     return Math.abs(a.getTime() - b.getTime())/1000;
 }
 
-var STOP = false;
-var WATCHDOG = now();
-
 async function handleRandoms(killWeakDanger=false) {
     // Does not handle skill-specific randoms
     var watch_time = timediff(now(), WATCHDOG);
@@ -952,7 +953,7 @@ async function handleRandoms(killWeakDanger=false) {
         await logout();
         throw new Error('WATCHDOG timer tripped. Exiting.');
     }
-    
+
     if (viewportInterfaceID() == 5993) { // post-login window
         log('Clearing login prompt')
         await mouse(457, 97, 1);
@@ -963,7 +964,7 @@ async function handleRandoms(killWeakDanger=false) {
     // would be better w/ pathing checks
     var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem|Strange.*Plant/i);
     for (var npc of dangerRandoms) {
-        if (afterMe(npc)) {    
+        if (afterMe(npc)) {
             if (killWeakDanger && npcName(npc).match(/Swarm/)) {
                 log('Killing', npcName(npc));
                 for (var i = 0; i < 5 && afterMe(npc); i++) {
@@ -972,9 +973,15 @@ async function handleRandoms(killWeakDanger=false) {
                     await sleep(2000);
                 }
             } else {
-                var pos = myPos(),             alpha = 2*3.14195*Math.random(),             sin_alpha = Math.sin(alpha),             cos_alpha = Math.cos(alpha),             seg_dist = 8;
+                var pos = myPos(),
+                    alpha = 2*3.14195*Math.random(),
+                    sin_alpha = Math.sin(alpha),
+                    cos_alpha = Math.cos(alpha),
+                    seg_dist = 8;
                 var safe_route = [
-                    [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],             [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],             [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
+                    [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],
+                    [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],
+                    [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
                 ];
                 log('Running from', npcName(npc), safe_route);
                 for (var i = 0; i < 5 && !await clickAlong(myPos(), safe_route, true); i++) await sleep(1000);
@@ -1016,7 +1023,7 @@ async function handleRandoms(killWeakDanger=false) {
         await mouse(265,266,1);
         await sleep(2000);
     }
-    
+
 }
 
 var PICKAXES = [1266,1268,1270,1272,1274,1276];
@@ -1027,8 +1034,8 @@ async function handleLostHead() {
     if (head.length > 0) {
         await clickMM(localToGlobal(head[0]));
         await waitForFlag();
-    }  
-    if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) { 
+    }
+    if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) {
         log('Found droped pickaxe head');
         if (heldItem() == 467) {
             await unequip();
@@ -1085,81 +1092,77 @@ async function walkTowards(x,z=null) {
 }
 
 async function draynorChopper() {
-    WATCHDOG = now();
-    await login()
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        var free = freeSlots(),
-            [x, z] = myPos(),
-            tobank = free == 0;
-        if (tobank) { 
-            log('Walking to',tobank?'bank':'forest','...');
-            await walkTowards([3093, 3243]);
-            if (dist(myPos(),[3093, 3243]) < 3) {
-                WATCHDOG = now();
-                //console.log(new Date().getTime(), 'Arrived');
-                var booth = chooseClosest(myPos(),draynor_bank_booths);
-                //console.log(new Date().getTime(),'Booth', booth);
-                await clickMM(booth);
-                await sleep(500);
-                await clickMS(globalToLocal(booth),null,1.0,2);
-                await sleep(500);
-                if (await clickOption(/.*Use-quickly.*/i)) {
-                    //console.log(new Date().getTime(),'Used booth...');
-                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
-                    if (viewportInterfaceID() != 5292) continue;
-                    //console.log(new Date().getTime(),'In bank!');
-                    await sleep(500);
-                    await depositAll();
-                    await clickMM(myPos());
-                    await sleep(1000);
-                    if (Math.random() < 0.2) await runOn();
-                }
-                continue;
-            } else {
-                continue;
-            }
-        }
-        
-        log('Searching for trees');
-        var trees = findObjects([1279, 1278, 1276],false,null,35),
-            barycenter = [(3093*3+x*1)/4, (3243*3+z*1)/4],
-            tree = chooseClosest(globalToLocal(barycenter), trees, 1.2),
-            gtree = localToGlobal(tree);
-            
-        var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
-            pos = tileLocPos(tile,0),
-            fake_entity = {"x": pos[0]+128*Math.random(), "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()};
-        log(tree, localToGlobal(tree), entityToMS(fake_entity,1.0));
-        if (entityToMS(fake_entity,1.0) === null) {
-            log('Walking to tree', gtree);
-            await walkTowards(gtree);
-            await sleep(1500);
-        } else {
-            log('Chopping tree');
-            await clickEntity(fake_entity,1.5,2);
+
+    await handleLogout();
+    await handleRandoms();
+
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = free == 0;
+    if (tobank) {
+        log('Walking to',tobank?'bank':'forest','...');
+        await walkTowards([3093, 3243]);
+        if (dist(myPos(),[3093, 3243]) < 3) {
+            WATCHDOG = now();
+            //console.log(new Date().getTime(), 'Arrived');
+            var booth = chooseClosest(myPos(),draynor_bank_booths);
+            //console.log(new Date().getTime(),'Booth', booth);
+            await clickMM(booth);
             await sleep(500);
-            if (await clickOption(/Chop.*/i)) {
-                await waitForFlag();
-                await waitForAnim(5);
-                if (myAnim() != 879) continue;
-                WATCHDOG = now();
-                for (var _ = 0; _ < 30 && myAnim() == 879; _++) { 
-                    await sleep(500);
-                }
-            } else {
-                log('Missed tree', gtree);
+            await clickMS(globalToLocal(booth),null,1.0,2);
+            await sleep(500);
+            if (await clickOption(/.*Use-quickly.*/i)) {
+                //console.log(new Date().getTime(),'Used booth...');
+                for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                if (viewportInterfaceID() != 5292) return;
+                //console.log(new Date().getTime(),'In bank!');
                 await sleep(500);
-                await walkTowards(gtree);
-                await waitForFlag();
+                await depositAll();
+                await clickMM(myPos());
+                await sleep(1000);
+                if (Math.random() < 0.2) await runOn();
             }
+            return;
+        } else {
+            return;
+        }
+    }
+
+    log('Searching for trees');
+    var trees = findObjects([1279, 1278, 1276],false,null,35),
+        barycenter = [(3093*3+x*1)/4, (3243*3+z*1)/4],
+        tree = chooseClosest(globalToLocal(barycenter), trees, 1.2),
+        gtree = localToGlobal(tree);
+
+    var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
+        pos = tileLocPos(tile,0),
+        fake_entity = {"x": pos[0]+128*Math.random()-64, "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()-64};
+    log(tree, localToGlobal(tree), entityToMS(fake_entity,1.0));
+    if (entityToMS(fake_entity,1.0) === null) {
+        log('Walking to tree', gtree);
+        await walkTowards(gtree);
+        await sleep(1500);
+    } else {
+        log('Chopping tree');
+        await clickEntity(fake_entity,1.5,2);
+        await sleep(500);
+        if (await clickOption(/Chop.*/i)) {
+            await waitForFlag();
+            await waitForAnim(5);
+            if (myAnim() != 879) return;
+            WATCHDOG = now();
+            for (var _ = 0; _ < 30 && myAnim() == 879; _++) {
+                await sleep(500);
+            }
+        } else {
+            log('Missed tree', gtree);
+            await sleep(500);
+            await walkTowards(gtree);
+            await waitForFlag();
         }
     }
 }
-  
+
 var falador_smelter_west_bank_path = [
     [2971, 3377],
     [2964, 3379],
@@ -1180,91 +1183,87 @@ var falador_west_bank_booths = [
 //var SMELT_ORES = [['Tin',439,14,1],['Copper',437,14,1]];
 var SMELT_ORES = [['Iron',441,28,1]];
 
-async function faladorWestSmelter() {
-    var ingredients = SMELT_ORES.map(([name,type,count,min]) => type);
-    WATCHDOG = now();
-    await login()
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        var free = freeSlots(),     [x, z] = myPos(),     tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
-        if (tobank || x < 2973) { 
-            //console.log('Walking to',tobank?'bank':'furnace','...');
-            if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
-                WATCHDOG = now();
-                //console.log(new Date().getTime(), 'Arrived');
-                if (tobank) {
-                    var booth = chooseClosest(myPos(),falador_west_bank_booths);
-                    //console.log(new Date().getTime(),'Booth', booth);
-                    await clickMM(booth);
+async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count,min]) => type)) {
+
+    await handleLogout();
+    await handleRandoms();
+
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
+    if (tobank || x < 2973) {
+        //console.log('Walking to',tobank?'bank':'furnace','...');
+        if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
+            WATCHDOG = now();
+            //console.log(new Date().getTime(), 'Arrived');
+            if (tobank) {
+                var booth = chooseClosest(myPos(),falador_west_bank_booths);
+                //console.log(new Date().getTime(),'Booth', booth);
+                await clickMM(booth);
+                await sleep(500);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    //console.log(new Date().getTime(),'Used booth...');
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    //console.log(new Date().getTime(),'In bank!');
                     await sleep(500);
-                    await clickMS(globalToLocal(booth),null,1.0,2);
-                    await sleep(500);
-                    if (await clickOption(/.*Use-quickly.*/i)) {
-                        //console.log(new Date().getTime(),'Used booth...');
-                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
-                        if (viewportInterfaceID() != 5292) continue;
-                        //console.log(new Date().getTime(),'In bank!');
-                        await sleep(500);
-                        await depositAll();
-                        for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {      
-                            var bpos = await bankFind(itype);
-                            if (bpos === null) {
-                                break;
-                            } else {
-                                await clickBank(bpos,null,2);
-                                await sleep(750);
-                                if (await clickOption(/Withdraw X.*/i)) {
-                                    await sleep(1000);
-                                    await typetext(String(icount));
-                                    await enter();
-                                    await sleep(1000);
-                                }
+                    await depositAll();
+                    for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {
+                        var bpos = await bankFind(itype);
+                        if (bpos === null) {
+                            break;
+                        } else {
+                            await clickBank(bpos,null,2);
+                            await sleep(750);
+                            if (await clickOption(/Withdraw X.*/i)) {
+                                await sleep(1000);
+                                await typetext(String(icount));
+                                await enter();
+                                await sleep(1000);
                             }
-                        }   
-                        await clickMM(myPos());
-                        await sleep(1000);
-                        if (Math.random() < 0.2) await runOn();
+                        }
                     }
-                    continue;
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
                 }
-            } else {
-                continue;
+                return;
             }
+        } else {
+            return;
         }
-        
-        if (z >= 3377 && !isWallAt(2971, 3376, 1531)) { // outside the door
-            await clickMS(globalToLocal(2971,3377.5),null,1.0,2);
-            await sleep(500);
-            if (await clickOption(/Open.*/i)) {
-                log('Opened the door!');
-            }
-            await sleep(750);
-        }
-        if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
-            //console.log('Headed to smelter...');
-            await clickMM([2974, 3369]);
-            await waitForFlag();
-            continue
-        }
-        
-        //smelt
-        await openTab(TAB_INVENTORY);
-        var comp = invFind(ingredients);
-        if (comp === null) continue;
-        await clickInv(comp);
+    }
+
+    if (z >= 3377 && !isWallAt(2971, 3376, 1531)) { // outside the door
+        await clickMS(globalToLocal(2971,3377.5),null,1.0,2);
         await sleep(500);
-        await clickMS(globalToLocal(2976, 3369),null,1.0,1);
-        await waitForAnim(5);
-        if (myAnim() != 899) continue;
-        WATCHDOG = now();
-        for (var _ = 0; _ < 5 && myAnim() == 899; _++) { 
-            await sleep(500);
+        if (await clickOption(/Open.*/i)) {
+            log('Opened the door!');
         }
-        
-    }   
+        await sleep(750);
+    }
+    if (dist([2974, 3369],myPos()) > 2) { //walk to smelter
+        //console.log('Headed to smelter...');
+        await clickMM([2974, 3369]);
+        await waitForFlag();
+        return;
+    }
+
+    //smelt
+    await openTab(TAB_INVENTORY);
+    var comp = invFind(ingredients);
+    if (comp === null) return;
+    await clickInv(comp);
+    await sleep(500);
+    await clickMS(globalToLocal(2976, 3369),null,1.0,1);
+    await waitForAnim(5);
+    if (myAnim() != 899) return;
+    WATCHDOG = now();
+    for (var _ = 0; _ < 5 && myAnim() == 899; _++) {
+        await sleep(500);
+    }
 }
 
 var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
@@ -1312,107 +1311,106 @@ var falador_east_bank_booths = [
 ]
 
 async function miningGuildMiner() {
-    WATCHDOG = now();
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        var mith = countItem(448), coal = countItem(454), free = freeSlots(), [x, z] = myPos();
-        if (free == 0 || z < 4000) { 
-            var tobank = free == 0;
-            //console.log('Walking to',tobank?'bank':'mine','...');
-            var path = z > 5000 ? out_of_mining_guild : falador_east_to_mining_guild;
-            var dir = z > 5000 ? true : !tobank;
-            if (await clickAlong([x,z], path, dir)) {
-                //console.log('Arrived');
-                WATCHDOG = now();
-                if (z < 5000 && tobank) {
-                    var booth = chooseRandom(falador_east_bank_booths);
-                    //console.log('Booth', booth);
-                    await clickMM(booth);
-                    await sleep(3000);
-                    await clickMS(globalToLocal(booth),null,1.0,2);
-                    await sleep(500);
-                    if (await clickOption(/.*Use-quickly.*/i)) {
-                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
-                        if (viewportInterfaceID() != 5292) continue;
-                        await depositAll(new Set(PICKAXES));
-                        await clickMM(myPos());
-                        await sleep(1000);
-                        if (Math.random() < 0.2) await runOn();
-                        await openTab(TAB_INVENTORY);
-                    }
-                    continue;
-                } else {
-                    if (z < 5000) {
-                        await climbLadder(3020, 3339);
-                    } else {
-                        await climbLadder(3020, 9739);
-                    }
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        }
-        
-        await handleLostHead();
-            
-        var toFind = mith*5 < coal ? [2102, 2103] : [2096, 2097]; //mith
-        var objs = findObjects(toFind,false,null,35);
-        objs = objs.filter(pos => localToGlobal(pos)[1] < 9750);
-        //log('mith:',objs.length);
-        if (objs.length == 0) {
-            toFind  = [2096, 2097]; //coal
-            objs = findObjects(toFind,false,null,35)
-            //log('coal:',objs.length);
-        }
-        if (objs.length == 0) {
-            //log('No coal!');
-            await sleep(1500);
-            continue
-        }
-        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
-        //log('mining',mine);
-        if (mine !== null) {
-        
-            if (localToMS(mine[0],mine[1]) === null) {
-                //log('walking to rock');
-                await walkTowards(localToGlobal(mine));
-                await waitForFlag();
-                continue;
-            }
-        
-            var [gx,gz] = localToGlobal(mine);
-            
-            await clickMS(mine, null, 0.05, 1, 10.0);
-            await waitForFlag();
-            await waitForAnim(5);
-            if (myAnim() != 628) continue;
-            
+    await handleLogout();
+    await handleRandoms();
+
+    var mith = countItem(448),
+        coal = countItem(454),
+        free = freeSlots(),
+        [x, z] = myPos();
+    if (free == 0 || z < 4000) {
+        var tobank = free == 0;
+        //console.log('Walking to',tobank?'bank':'mine','...');
+        var path = z > 5000 ? out_of_mining_guild : falador_east_to_mining_guild;
+        var dir = z > 5000 ? true : !tobank;
+        if (await clickAlong([x,z], path, dir)) {
+            //console.log('Arrived');
             WATCHDOG = now();
-            await openTab(TAB_INVENTORY);
-            
-            //console.log('Mining');
-            for (var i = 0; i < 60; i++) {
-                if (myAnim() != 628) break;
-                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
-                    log('Smoking rocks!');
-                    var [x,z] = myPos()
-                    x = x + Math.random()*5-2.5;
-                    z = z + Math.random()*5-2.5;
-                    await clickMM(x,z);
-                    await waitForFlag();
-                    break;
+            if (z < 5000 && tobank) {
+                var booth = chooseRandom(falador_east_bank_booths);
+                //console.log('Booth', booth);
+                await clickMM(booth);
+                await sleep(3000);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    await depositAll(new Set(PICKAXES));
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
+                    await openTab(TAB_INVENTORY);
                 }
-                if (!isObjectAt(gx,gz,toFind)) break;
-                //log('...');
-                await sleep(250);
+                return;
+            } else {
+                if (z < 5000) {
+                    await climbLadder(3020, 3339);
+                } else {
+                    await climbLadder(3020, 9739);
+                }
+                return;
             }
-            
-        }  
-    }   
+        } else {
+            return;
+        }
+    }
+
+    await handleLostHead();
+
+    var toFind = mith*5 < coal ? [2102, 2103] : [2096, 2097]; //mith
+    var objs = findObjects(toFind,false,null,35);
+    objs = objs.filter(pos => localToGlobal(pos)[1] < 9750);
+    //log('mith:',objs.length);
+    if (objs.length == 0) {
+        toFind  = [2096, 2097]; //coal
+        objs = findObjects(toFind,false,null,35)
+        //log('coal:',objs.length);
+    }
+    if (objs.length == 0) {
+        //log('No coal!');
+        await sleep(1500);
+        return;
+    }
+    var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+    //log('mining',mine);
+    if (mine !== null) {
+
+        if (localToMS(mine[0],mine[1]) === null) {
+            //log('walking to rock');
+            await walkTowards(localToGlobal(mine));
+            await waitForFlag();
+            return;
+        }
+
+        var [gx,gz] = localToGlobal(mine);
+
+        await clickMS(mine, null, 0.05, 1, 10.0);
+        await waitForFlag();
+        await waitForAnim(5);
+        if (myAnim() != 628) return;
+
+        WATCHDOG = now();
+        await openTab(TAB_INVENTORY);
+
+        //console.log('Mining');
+        for (var i = 0; i < 60; i++) {
+            if (myAnim() != 628) break;
+            if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                log('Smoking rocks!');
+                var [x,z] = myPos()
+                x = x + Math.random()*5-2.5;
+                z = z + Math.random()*5-2.5;
+                await clickMM(x,z);
+                await waitForFlag();
+                break;
+            }
+            if (!isObjectAt(gx,gz,toFind)) break;
+            //log('...');
+            await sleep(250);
+        }
+
+    }
 }
 
 var varrock_west_to_falador_west = [
@@ -1491,104 +1489,104 @@ var draynor_bank_booths = [
 ];
 
 async function lumbySwampMiner() {
-    WATCHDOG = now();
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        var mith = countItem(448), addy = countItem(450), coal = countItem(454), free = freeSlots(), [x, z] = myPos();
-        if (free == 0 || x < 3232) { 
-            var tobank = free < 1;
-            //console.log('Walking to',tobank?'bank':'mine','...');
-            if (await clickAlong([x,z], draynor_bank_to_lumby_swamp_mine, !tobank)) {
-                //console.log('Arrived');
-                WATCHDOG = now();
-                if (tobank) {
-                    var booth = chooseRandom(draynor_bank_booths);
-                    //console.log('Booth', booth);
-                    await clickMM(booth);
-                    await sleep(3000);
-                    await clickMS(globalToLocal(booth),null,1.0,2);
-                    await sleep(500);
-                    if (await clickOption(/.*Use-quickly.*/i)) {
-                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
-                        if (viewportInterfaceID() != 5292) continue;
-                        await depositAll(new Set(PICKAXES));
-                        await clickMM(myPos());
-                        await sleep(1000);
-                        if (Math.random() < 0.2) await runOn();
-                        await openTab(TAB_INVENTORY);
-                    }
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        }
-        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
-        
-        await handleLostHead();
-            
-        var toFind = [2102, 2103]; //mith
-        var objs = findObjects(toFind,false,null,35);
-        if (objs.length == 0) {
-            toFind = toFind = [2096, 2097]; //coal
-            objs = findObjects(toFind,false,null,35)
-        }
-        if (objs.length == 0) {
-            toFind = toFind = [2096, 2097]; //coal
-            objs = findObjects(toFind,false,null,35)
-        }
-        if (objs.length == 0) {
-            //log('No coal!');
-            await clickMM(draynor_bank_to_lumby_swamp_mine[draynor_bank_to_lumby_swamp_mine.length-1])
-            continue
-        }
-        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
-        //log('mining',mine);
-        if (mine !== null) {
-        
-            if (localToMS(mine[0],mine[1]) === null) {
-                //log('walking to rock');
-                await clickMM(localToGlobal(mine));
-                await waitForFlag();
-                continue;
-            }
-        
-            var [gx,gz] = localToGlobal(mine);
-            
-            await clickMS(mine, null, 0.05, 1, 10.0);
-            await waitForFlag();
-            await waitForAnim(5);
-            if (myAnim() != 628) continue;
-            
+    await handleLogout();
+    await handleRandoms();
+
+    var mith = countItem(448),
+        addy = countItem(450),
+        coal = countItem(454),
+        free = freeSlots(),
+        [x, z] = myPos();
+    if (free == 0 || x < 3232) {
+        var tobank = free < 1;
+        //console.log('Walking to',tobank?'bank':'mine','...');
+        if (await clickAlong([x,z], draynor_bank_to_lumby_swamp_mine, !tobank)) {
+            //console.log('Arrived');
             WATCHDOG = now();
-            await openTab(TAB_INVENTORY);
-            
-            //console.log('Mining');
-            for (var i = 0; i < 60; i++) {
-                if (myAnim() != 628) break;
-                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
-                    log('Smoking rocks!');
-                    var [x,z] = myPos()
-                    x = x + Math.random()*5-2.5;
-                    z = z + Math.random()*5-2.5;
-                    await clickMM(x,z);
-                    await waitForFlag();
-                    break;
+            if (tobank) {
+                var booth = chooseRandom(draynor_bank_booths);
+                //console.log('Booth', booth);
+                await clickMM(booth);
+                await sleep(3000);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    await depositAll(new Set(PICKAXES));
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
+                    await openTab(TAB_INVENTORY);
                 }
-                if (!isObjectAt(gx,gz,toFind)) break;
-                //log('...');
-                await sleep(250);
+                return;
             }
-            
-        }  
-    }   
+        } else {
+            return;
+        }
+    }
+    //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
+
+    await handleLostHead();
+
+    var toFind = [2102, 2103]; //mith
+    var objs = findObjects(toFind,false,null,35);
+    if (objs.length == 0) {
+        toFind = toFind = [2096, 2097]; //coal
+        objs = findObjects(toFind,false,null,35)
+    }
+    if (objs.length == 0) {
+        toFind = toFind = [2096, 2097]; //coal
+        objs = findObjects(toFind,false,null,35)
+    }
+    if (objs.length == 0) {
+        //log('No coal!');
+        await clickMM(draynor_bank_to_lumby_swamp_mine[draynor_bank_to_lumby_swamp_mine.length-1])
+        return;
+    }
+    var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+    //log('mining',mine);
+    if (mine !== null) {
+
+        if (localToMS(mine[0],mine[1]) === null) {
+            //log('walking to rock');
+            await clickMM(localToGlobal(mine));
+            await waitForFlag();
+            return;
+        }
+
+        var [gx,gz] = localToGlobal(mine);
+
+        await clickMS(mine, null, 0.05, 1, 10.0);
+        await waitForFlag();
+        await waitForAnim(5);
+        if (myAnim() != 628) return;
+
+        WATCHDOG = now();
+        await openTab(TAB_INVENTORY);
+
+        //console.log('Mining');
+        for (var i = 0; i < 60; i++) {
+            if (myAnim() != 628) break;
+            if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                log('Smoking rocks!');
+                var [x,z] = myPos()
+                x = x + Math.random()*5-2.5;
+                z = z + Math.random()*5-2.5;
+                await clickMM(x,z);
+                await waitForFlag();
+                break;
+            }
+            if (!isObjectAt(gx,gz,toFind)) break;
+            //log('...');
+            await sleep(250);
+        }
+
+    }
 }
 
 var varrock_east_bank_mine_path = [
-    [3254, 3421], //bank 
+    [3254, 3421], //bank
     [3254, 3428],
     [3261, 3429],
     [3270, 3427],
@@ -1599,7 +1597,7 @@ var varrock_east_bank_mine_path = [
     [3291, 3395],
     [3291, 3385],
     [3290, 3374],
-    [3286, 3366] // mine 
+    [3286, 3366] // mine
 ];
 
 var varrock_east_bank_booths = [
@@ -1609,88 +1607,87 @@ var varrock_east_bank_booths = [
 ];
 
 async function varrockEastMiner() {
-    WATCHDOG = now();
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        var tin = countItem(439),     copper = countItem(437),     iron = countItem(441),     free = freeSlots(),     [x, z] = myPos();
-        if (free == 0 || z > 3370) { 
-            var tobank = free < 1;
-            //console.log('Walking to',tobank?'bank':'mine','...');
-            if (await clickAlong([x,z], varrock_east_bank_mine_path, !tobank)) {
-                //console.log('Arrived');
-                WATCHDOG = now();
-                if (tobank) {
-                    var booth = chooseRandom(varrock_east_bank_booths);
-                    //console.log('Booth', booth);
-                    await clickMM(booth);
-                    await sleep(3000);
-                    await clickMS(globalToLocal(booth),null,1.0,2);
-                    await sleep(500);
-                    if (await clickOption(/.*Use-quickly.*/i)) {
-                        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
-                        if (viewportInterfaceID() != 5292) continue;
-                        await depositAll(new Set(PICKAXES));
-                        await clickMM(myPos());
-                        await sleep(1000);
-                        if (Math.random() < 0.2) await runOn();
-                        await openTab(TAB_INVENTORY);
-                    }
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        }
-        //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
-        
-        await handleLostHead();
-            
-        var toFind = [2092, 2093]; //iron
-        var objs = findObjects(toFind);
-        if (objs.length == 0) {
-            toFind = tin > copper ? [2090, 2091] : [2094, 2095]; // copper or tin backup
-            log('No iron');
-            objs = findObjects(toFind)
-        }
-        if (objs.length == 0) {
-            await clickMM(varrock_east_bank_mine_path[varrock_east_bank_mine_path.length-1])
-            continue
-        }
-        var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
-        
-        if (mine !== null) {
-            var [gx,gz] = localToGlobal(mine);
-            
-            await clickMS(mine, null, 0.05, 1, 10.0);
-            await waitForFlag();
-            await waitForAnim(5);
-            if (myAnim() != 628) continue;
-            
+    await handleLogout();
+    await handleRandoms();
+
+    var tin = countItem(439),
+        copper = countItem(437),
+        iron = countItem(441),
+        free = freeSlots(),
+        [x, z] = myPos();
+    if (free == 0 || z > 3370) {
+        var tobank = free < 1;
+        //console.log('Walking to',tobank?'bank':'mine','...');
+        if (await clickAlong([x,z], varrock_east_bank_mine_path, !tobank)) {
+            //console.log('Arrived');
             WATCHDOG = now();
-            await openTab(TAB_INVENTORY);
-            
-            console.log('Mining');
-            for (var i = 0; i < 60; i++) {
-                if (myAnim() != 625) break;
-                if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
-                    log('Smoking rocks!');
-                    var [x,z] = myPos()
-                    x = x + Math.random()*5-2.5;
-                    z = z + Math.random()*5-2.5;
-                    await clickMM(x,z);
-                    await waitForFlag();
-                    break;
+            if (tobank) {
+                var booth = chooseRandom(varrock_east_bank_booths);
+                //console.log('Booth', booth);
+                await clickMM(booth);
+                await sleep(3000);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    await depositAll(new Set(PICKAXES));
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
+                    await openTab(TAB_INVENTORY);
                 }
-                if (!isObjectAt(gx,gz,toFind)) break;
-                //log('...');
-                await sleep(250);
+                return;
             }
-            
-        }  
-    }   
+        } else {
+            return;
+        }
+    }
+    //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
+
+    await handleLostHead();
+
+    var toFind = [2092, 2093]; //iron
+    var objs = findObjects(toFind);
+    if (objs.length == 0) {
+        toFind = tin > copper ? [2090, 2091] : [2094, 2095]; // copper or tin backup
+        log('No iron');
+        objs = findObjects(toFind)
+    }
+    if (objs.length == 0) {
+        await clickMM(varrock_east_bank_mine_path[varrock_east_bank_mine_path.length-1])
+        return;
+    }
+    var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+
+    if (mine !== null) {
+        var [gx,gz] = localToGlobal(mine);
+
+        await clickMS(mine, null, 0.05, 1, 10.0);
+        await waitForFlag();
+        await waitForAnim(5);
+        if (myAnim() != 628) return;
+
+        WATCHDOG = now();
+        await openTab(TAB_INVENTORY);
+
+        console.log('Mining');
+        for (var i = 0; i < 60; i++) {
+            if (myAnim() != 625) break;
+            if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
+                log('Smoking rocks!');
+                var [x,z] = myPos()
+                x = x + Math.random()*5-2.5;
+                z = z + Math.random()*5-2.5;
+                await clickMM(x,z);
+                await waitForFlag();
+                break;
+            }
+            if (!isObjectAt(gx,gz,toFind)) break;
+            //log('...');
+            await sleep(250);
+        }
+    }
 }
 
 async function buryBones() {
@@ -1707,102 +1704,108 @@ async function buryBones() {
 }
 
 async function chickenKiller() {
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        if (freeSlots() < 1) {
-            await buryBones()
-        } else {
-            await pickupItems([526,314], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
-        }
-        
-        var chickens = findNPCs(/Chicken/);
-        if (chickens.length < 1) {
-            await sleep(1000);
-            continue;
-        }
-        
-        var dinner = chooseRandom(chickens);
-        await clickEntity(dinner);
-        
-        var target;
-        for (var i = 0; i < 10; i++) {
-            target = entityTargetID(player());
-            if (target != -1) break;
-            await sleep(500);
-        }
-        if (target == -1) continue;
-        WATCHDOG = now();
-        log('Murdering', target);
-        for (var i = 0; i < 30; i++) {
-            if (entityTargetID(player()) != target) break;
-            log('...');
-            await sleep(500);
-        }
-        await sleep(500);
-        
+    await handleLogout();
+    await handleRandoms();
+
+    if (freeSlots() < 1) {
+        await buryBones()
+    } else {
+        await pickupItems([526,314], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
     }
+
+    var chickens = findNPCs(/Chicken/);
+    if (chickens.length < 1) {
+        await sleep(1000);
+        return;
+    }
+
+    var dinner = chooseRandom(chickens);
+    await clickEntity(dinner);
+
+    var target;
+    for (var i = 0; i < 10; i++) {
+        target = entityTargetID(player());
+        if (target != -1) break;
+        await sleep(500);
+    }
+    if (target == -1) return;
+    WATCHDOG = now();
+    log('Murdering', target);
+    for (var i = 0; i < 30; i++) {
+        if (entityTargetID(player()) != target) break;
+        log('...');
+        await sleep(500);
+    }
+    await sleep(500);
 }
 
 async function cowKiller() {
-    while (true) {
-        if (STOP) return;
-        await handleLogout();
-        await handleRandoms();
-        
-        if (freeSlots() < 1) {
-            //log('bury');
-            await buryBones();
-        } else {
-            //log('collect');
-            await pickupItems([527,315], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
-        }
-        
-        var mobs = findNPCs(/Cow/i);
-        mobs.filter(m => entityTargetID(m) == -1);
-        if (mobs.length < 1) {
-            //log('going long');
-            mobs = findNPCs(/Cow/i,false,50);
-        }
-        if (mobs.length < 1) {
-            log('No mobs');
-            await sleep(5000);
-            continue;
-        }
-        
-        var target = chooseRandom(mobs);
-        
-        if (!await clickEntity(target,1.0)) {
-            await walkTowards(localToGlobal(entityToLocal(target)));
-            await waitForFlag();
-            continue;
-        }
-        
-        for (var i = 0; i < 8; i++) {
-            target = entityTargetID(player());
-            if (target != -1) break;
-            await sleep(250);
-        }
-        if (target == -1) continue;
-        
-        WATCHDOG = now();
-        //log('Murdering', target);
-        for (var i = 0; i < 30; i++) {
-            if (entityTargetID(player()) != target) {
-                if (Math.random() < 0.05) {
-                    await runOn();
-                    await openTab(TAB_INVENTORY);
-                }
-                break;
+
+    await handleLogout();
+    await handleRandoms();
+
+    if (freeSlots() < 1) {
+        //log('bury');
+        await buryBones();
+    } else {
+        //log('collect');
+        await pickupItems([527,315], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
+    }
+
+    var mobs = findNPCs(/Cow/i);
+    mobs.filter(m => entityTargetID(m) == -1);
+    if (mobs.length < 1) {
+        //log('going long');
+        mobs = findNPCs(/Cow/i,false,50);
+    }
+    if (mobs.length < 1) {
+        log('No mobs');
+        await sleep(5000);
+        return;
+    }
+
+    var target = chooseRandom(mobs);
+
+    if (!await clickEntity(target,1.0)) {
+        await walkTowards(localToGlobal(entityToLocal(target)));
+        await waitForFlag();
+        return;
+    }
+
+    for (var i = 0; i < 8; i++) {
+        target = entityTargetID(player());
+        if (target != -1) break;
+        await sleep(250);
+    }
+    if (target == -1) return;
+
+    WATCHDOG = now();
+    //log('Murdering', target);
+    for (var i = 0; i < 30; i++) {
+        if (entityTargetID(player()) != target) {
+            if (Math.random() < 0.05) {
+                await runOn();
+                await openTab(TAB_INVENTORY);
             }
-            //log('...');
-            await sleep(500);
+            break;
         }
+        //log('...');
         await sleep(500);
-        
+    }
+    await sleep(500);
+
+}
+
+
+var STOP = false;
+var WATCHDOG = now();
+
+async function mainLoop() {
+    WATCHDOG = now();
+    log('Starting');
+    while (!STOP) {
+        await cowKiller();
     }
 }
 
-cowKiller().then(() => { log("Done") });
+mainLoop().then(() => { log("Done") });
