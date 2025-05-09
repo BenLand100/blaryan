@@ -74,6 +74,10 @@ function tileLocTypecode(tile, i) {
     return tile !== null ? tile['tu'][i]['tk'] : null;
 }
 
+function tileLocPos(tile,i) {
+    return tile !== null ? [tile['tu'][i]['x'], tile['tu'][i]['y'], tile['tu'][i]['z']] : null;
+}
+
 function tileWallTypecode(tile) {
     return tile !== null ? (tile['tC'] === null ? null : tile['tC']['tk']) : null;
 }
@@ -417,14 +421,14 @@ function localToMS(i, j=null, height=0.0) {
         i = i[0];
     }
     var x = (i << 7) + 64, z = (j << 7) + 64, 
-        y = groundHeight(x, z) + height * 128;
+        y = groundHeight(x, z) - height * 128;
     return project_ms(x, y, z);
 }
 
 function entityToMS(entity, height=0.0) {
     var x = entityX(entity);
     var z = entityZ(entity);
-    var y = groundHeight(x, z) + height * 128;
+    var y = groundHeight(x, z) - height * 128;
     return project_ms(x,y,z);
 }
 
@@ -871,7 +875,9 @@ async function clickEntity(entity, height=0.0, button=1) {
     const pos = entityToMS(entity,height=height);
     if (pos !== null) {
         await mouse(pos[0], pos[1], button);
+        return true;
     }
+    return false;
 }
 
 async function clickOption(pattern, button=1) {
@@ -955,7 +961,7 @@ async function handleRandoms(killWeakDanger=false) {
 
     // run random direction from dangerous randoms
     // would be better w/ pathing checks
-    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem/i);
+    var dangerRandoms = findNPCs(/Shade|Swarm|Zombie|Rock.*Golem|Strange.*Plant/i);
     for (var npc of dangerRandoms) {
         if (afterMe(npc)) {    
             if (killWeakDanger && npcName(npc).match(/Swarm/)) {
@@ -980,14 +986,18 @@ async function handleRandoms(killWeakDanger=false) {
         }
     }
     // interact with safe randoms if they're meant for you
-    var safeRandoms = findNPCs(/Strange.*Plant|Drunken Dwarf|Genie|Mysterious Old Man/i);
+    var safeRandoms = findNPCs(/Strange.*Plant|Drunken Dwarf|Genie|Mysterious Old Man/i,false);
     for (var npc of safeRandoms) {
         log('Found', npcName(npc));
         for (var i = 0; i < 5; i++) {
             if (npcName(npc) === null || npcName(npc) == "") break;
             if (afterMe(npc) || npcName(npc).match(/Strange.*Plant/i)) {
                 log('Solving', npcName(npc));
-                await clickEntity(npc, height=0.5);
+                if (!await clickEntity(npc, height=0.5)) {
+                    await clickMM(localToGlobal(entityToLocal(npc)));
+                    await waitForFlag();
+                    await clickEntity(npc, height=0.5);
+                }
                 await sleep(2000);
             } else {
                 break;
@@ -1045,6 +1055,108 @@ async function handleLogout() {
     if (!ingame()) {
         log('Timed out... logging back in.');
         await login();
+    }
+}
+
+async function makePath() {
+    var pos = myPos();
+    var path = [pos];
+    while (!STOP) {
+        pos = myPos();
+        if (dist(pos,path[path.length-1]) >= 7) {
+            path.push(pos);
+            console.log(path)
+        }
+        await sleep(250)
+    }
+    console.log('Final');
+    console.log(path);
+}
+
+async function walkTowards(x,z=null) {
+    if (z === null) {
+        z = x[1];
+        x = x[0];
+    }
+    var pos = myPos(), dx = x-pos[0], dz = z-pos[1], r = Math.sqrt(dx*dx+dz*dz), step = Math.min(1,12/r);
+    var next_pos = [pos[0] + dx*step, pos[1] + dz*step];
+    await clickMM(next_pos);
+    await waitForFlag();
+}
+
+async function draynorChopper() {
+    WATCHDOG = now();
+    await login()
+    while (true) {
+        if (STOP) return;
+        await handleLogout();
+        await handleRandoms();
+        
+        var free = freeSlots(),
+            [x, z] = myPos(),
+            tobank = free == 0;
+        if (tobank) { 
+            log('Walking to',tobank?'bank':'forest','...');
+            await walkTowards([3093, 3243]);
+            if (dist(myPos(),[3093, 3243]) < 3) {
+                WATCHDOG = now();
+                //console.log(new Date().getTime(), 'Arrived');
+                var booth = chooseClosest(myPos(),draynor_bank_booths);
+                //console.log(new Date().getTime(),'Booth', booth);
+                await clickMM(booth);
+                await sleep(500);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    //console.log(new Date().getTime(),'Used booth...');
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) continue;
+                    //console.log(new Date().getTime(),'In bank!');
+                    await sleep(500);
+                    await depositAll();
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
+                }
+                continue;
+            } else {
+                continue;
+            }
+        }
+        
+        log('Searching for trees');
+        var trees = findObjects([1279, 1278, 1276],false,null,35),
+            barycenter = [(3093*3+x*1)/4, (3243*3+z*1)/4],
+            tree = chooseClosest(globalToLocal(barycenter), trees, 1.2),
+            gtree = localToGlobal(tree);
+            
+        var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
+            pos = tileLocPos(tile,0),
+            fake_entity = {"x": pos[0]+128*Math.random(), "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()};
+        log(tree, localToGlobal(tree), entityToMS(fake_entity,1.0));
+        if (entityToMS(fake_entity,1.0) === null) {
+            log('Walking to tree', gtree);
+            await walkTowards(gtree);
+            await sleep(1500);
+        } else {
+            log('Chopping tree');
+            await clickEntity(fake_entity,1.5,2);
+            await sleep(500);
+            if (await clickOption(/Chop.*/i)) {
+                await waitForFlag();
+                await waitForAnim(5);
+                if (myAnim() != 879) continue;
+                WATCHDOG = now();
+                for (var _ = 0; _ < 30 && myAnim() == 879; _++) { 
+                    await sleep(500);
+                }
+            } else {
+                log('Missed tree', gtree);
+                await sleep(500);
+                await walkTowards(gtree);
+                await waitForFlag();
+            }
+        }
     }
 }
   
@@ -1155,22 +1267,24 @@ async function faladorWestSmelter() {
     }   
 }
 
-async function makePath() {
-    var pos = myPos();
-    var path = [pos];
-    while (!STOP) {
-        pos = myPos();
-        if (dist(pos,path[path.length-1]) >= 7) {
-            path.push(pos);
-            console.log(path)
-        }
-        await sleep(250)
-    }
-    console.log('Final');
-    console.log(path);
-}
-
 var SMOKING_ROCKS = [2119,2120,2121,2122,2123,2124,2125,2126,2127,2128,2129,2130,2131,2132,2133,2134,2135,2136,2137,2138,2139,2140];
+
+async function climbLadder(x,z) {
+    if (dist([x, z],myPos()) < 4) {
+        await clickMS(globalToLocal(x, z),null,1.0,2);
+        await sleep(500);
+        if (await clickOption(/.*Climb.*/i)) {
+            await waitForFlag();
+            await sleep(1000);
+            return true;
+        } else {
+            mouse(Math.random()*500,Math.random()*400)
+        }
+    } else {
+        await walkTowards(x,z);
+    }
+    return false;
+}
 
 var falador_east_to_mining_guild = [
     [3013, 3355],
@@ -1196,32 +1310,6 @@ var falador_east_bank_booths = [
     [3014, 3354],
     [3015, 3354],
 ]
-
-async function walkTowards(x,z=null) {
-    if (z === null) {
-        z = x[1];
-        x = x[0];
-    }
-    var pos = myPos(), dx = x-pos[0], dz = z-pos[1], r = Math.sqrt(dx*dx+dz*dz), step = Math.min(1,12/r);
-    var next_pos = [pos[0] + dx*step, pos[1] + dz*step];
-    await clickMM(next_pos);
-    await waitForFlag();
-}
-
-async function climbLadder(x,z) {
-    if (dist([x, z],myPos()) < 4) {
-        await clickMS(globalToLocal(x, z),null,1.0,2);
-        await sleep(500);
-        if (await clickOption(/.*Climb.*/i)) {
-            await waitForFlag();
-            await sleep(1000);
-            return true;
-        }
-    } else {
-        await walkTowards(x,z);
-    }
-    return false;
-}
 
 async function miningGuildMiner() {
     WATCHDOG = now();
@@ -1607,12 +1695,12 @@ async function varrockEastMiner() {
 
 async function buryBones() {
     await sleep(500);
-    for (var i = 0; i < 28; i++) {
-        while (invItem(i) == 527) { // BONES
+    for (var i = 0; i < 28 && !STOP; i++) {
+        while (invItem(i) == 527 && !STOP) { // BONES
             await openTab(TAB_INVENTORY);
             await sleep(500);
             await clickInv(i);
-            await sleep(1000);
+            await sleep(250*Math.random());
         }
         await handleRandoms();
     }
@@ -1621,10 +1709,7 @@ async function buryBones() {
 async function chickenKiller() {
     while (true) {
         if (STOP) return;
-        if (! await login()) {
-            log('Can\'t login; bailing out!');
-            return;
-        }
+        await handleLogout();
         await handleRandoms();
         
         if (freeSlots() < 1) {
@@ -1661,4 +1746,63 @@ async function chickenKiller() {
     }
 }
 
-miningGuildMiner().then(() => { log("Done") });
+async function cowKiller() {
+    while (true) {
+        if (STOP) return;
+        await handleLogout();
+        await handleRandoms();
+        
+        if (freeSlots() < 1) {
+            //log('bury');
+            await buryBones();
+        } else {
+            //log('collect');
+            await pickupItems([527,315], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
+        }
+        
+        var mobs = findNPCs(/Cow/i);
+        mobs.filter(m => entityTargetID(m) == -1);
+        if (mobs.length < 1) {
+            //log('going long');
+            mobs = findNPCs(/Cow/i,false,35);
+        }
+        if (mobs.length < 1) {
+            log('No mobs');
+            await sleep(1000);
+            continue;
+        }
+        
+        var target = chooseRandom(mobs);
+        
+        if (!await clickEntity(target,1.0)) {
+            await walkTowards(localToGlobal(entityToLocal(target)));
+            await waitForFlag();
+            continue;
+        }
+        
+        for (var i = 0; i < 10; i++) {
+            target = entityTargetID(player());
+            if (target != -1) break;
+            await sleep(500);
+        }
+        if (target == -1) continue;
+        
+        WATCHDOG = now();
+        //log('Murdering', target);
+        for (var i = 0; i < 30; i++) {
+            if (entityTargetID(player()) != target) {
+                if (Math.random() < 0.05) {
+                    await runOn();
+                    await openTab(TAB_INVENTORY);
+                }
+                break;
+            }
+            //log('...');
+            await sleep(500);
+        }
+        await sleep(500);
+        
+    }
+}
+
+cowKiller().then(() => { log("Done") });
