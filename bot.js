@@ -1036,7 +1036,7 @@ async function handleLostHead() {
         await waitForFlag();
     }
     if ((await pickupItems(PICKAXE_HEADS)) || invFind(PICKAXE_HEADS) !== null) {
-        log('Found droped pickaxe head');
+        log('Found dropped pickaxe head');
         if (heldItem() == 467) {
             await unequip();
         }
@@ -1067,7 +1067,7 @@ async function handleLostHatchetHead() {
         await waitForFlag();
     }
     if ((await pickupItems(HATCHET_HEADS)) || invFind(HATCHET_HEADS) !== null) {
-        log('Found droped pickaxe head');
+        log('Found dropped hatchet head');
         if (heldItem() == 493) {
             await unequip();
         }
@@ -1116,8 +1116,8 @@ async function walkTowards(x,z=null) {
         z = x[1];
         x = x[0];
     }
-    var pos = myPos(), dx = x-pos[0], dz = z-pos[1], r = Math.sqrt(dx*dx+dz*dz), step = Math.min(1,12/r);
-    var next_pos = [pos[0] + dx*step, pos[1] + dz*step];
+    var pos = myPos(), dx = x-pos[0], dz = z-pos[1], r = Math.sqrt(dx*dx+dz*dz), step = r < 12 ? 1 : (10+Math.random()*4)/r;
+    var next_pos = [pos[0] + dx*step + (r > 4 ? Math.random()*2-1 : 0), pos[1] + dz*step + (r > 4 ? Math.random()*2-1 : 0)];
     await clickMM(next_pos);
     await waitForFlag();
 }
@@ -1133,8 +1133,8 @@ var HAMMER = 2348;
 //var SMITH_BARS = [['Gold Bar',2358,27,1]];
 //var SMITH_BARS = [['Mith Bar',2356,27,1]];
 //var SMITH_BARS = [['Steel Bar',2354,27,1]];
-//var SMITH_BARS = [['Iron Bar',2352,27,1]];
-var SMITH_BARS = [['Bronze Bar',2350,27,1]];
+var SMITH_BARS = [['Iron Bar',2352,27,1]];
+//var SMITH_BARS = [['Bronze Bar',2350,27,1]];
 var SMITH_ANVIL = [3188, 3425]
 var SMITH_TARGET = [459, 143]; // arrowheads
 
@@ -1217,6 +1217,9 @@ async function varrockWestSmithing() {
     }
 }
 
+//var CHOP_TREES = [1276, 1277, 1278, 1279]; // normal
+var CHOP_TREES = [1281]; // oak
+
 async function varrockWestChopper() {
 
     await handleLogout();
@@ -1227,10 +1230,10 @@ async function varrockWestChopper() {
         [x, z] = myPos(),
         tobank = free == 0;
     if (tobank) {
-        //log('Walking to',tobank?'bank':'forest','...');
+        log('Walking to',tobank?'bank':'forest','...');
         await walkTowards([3183, 3436]);
         if (dist(myPos(),[3183, 3436]) < 3) {
-            //console.log(new Date().getTime(), 'Arrived');
+            console.log(new Date().getTime(), 'Arrived');
             var booth = chooseClosest(myPos(),varrock_west_bank_booths);
             //console.log(new Date().getTime(),'Booth', booth);
             await clickMM(booth);
@@ -1238,7 +1241,7 @@ async function varrockWestChopper() {
             await clickMS(globalToLocal(booth),null,1.0,2);
             await sleep(500);
             if (await clickOption(/.*Use-quickly.*/i)) {
-                //console.log(new Date().getTime(),'Used booth...');
+                console.log(new Date().getTime(),'Used booth...');
                 for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
                 if (viewportInterfaceID() != 5292) return;
                 //console.log(new Date().getTime(),'In bank!');
@@ -1256,41 +1259,39 @@ async function varrockWestChopper() {
             return;
         }
     }
-    //log('Searching for trees');
-    //var tree_ids = [1276, 1277, 1278, 1279];
-    var tree_ids = [1281];
-    var trees = findObjects(tree_ids,false,null,35).filter( pos => {
+    log('Searching for trees');CHOP_TREES
+    var trees = findObjects(CHOP_TREES,false,null,35).filter( pos => {
         var gpos = localToGlobal(pos); 
-        return gpos[0] <= 3190 && gpos[1] <= 3446;
+        return gpos[0] <= 3190 && gpos[1] <= 3432;
     });
-    var barycenter = [(3183*1+x*1)/2, (3436*1+z*1)/2];
+    var barycenter = [(3183*1+x*3)/4, (3436*1+z*3)/4];
     if (trees.length == 0) {
         log('No trees!');
         await sleep(4000);
         return;
     } 
-    var tree = chooseClosest(globalToLocal(barycenter), trees, 1.2),
+    var tree = chooseClosest(globalToLocal(barycenter), trees, 1.3),
         gtree = localToGlobal(tree);
 
     var tile =  getTiles()[currentLevel()][tree[0]][tree[1]],
         pos = tileLocPos(tile,0),
         fake_entity = {"x": pos[0]+128*Math.random()-64, "y": pos[1]+64+128*Math.random(), "z": pos[2]+128*Math.random()-64};
     if (entityToMS(fake_entity,1.0) === null) {
-        //log('Walking to tree', gtree);
+        log('Walking to tree', gtree);
         await walkTowards(gtree);
         await sleep(1500);
     } else {
-        //log('Chopping tree');
+        log('Chopping tree');
         await clickEntity(fake_entity,1.5,2);
         await sleep(500);
         if (await clickOption(/Chop.*/i)) {
-            //log('Hit tree', gtree);
+            log('Hit tree', gtree);
             await waitForFlag();
             await waitForAnim(5);
             if (myAnim() != 877) return;
-            WATCHDOG = now();
             for (var _ = 0; _ < 120 && myAnim() == 877; _++) {
-                if (!isObjectAt(gtree[0],gtree[1],tree_ids)) {
+                WATCHDOG = now();
+                if (!isObjectAt(gtree[0],gtree[1],CHOP_TREES)) {
                     log('Found Ent!!!');
                     await clickMM(myPos());
                     break;
@@ -1302,7 +1303,7 @@ async function varrockWestChopper() {
                 await sleep(500);
             }
         } else {
-            //log('Missed tree', gtree);
+            log('Missed tree', gtree);
             await sleep(500);
             await walkTowards(gtree);
             await waitForFlag();
@@ -2113,7 +2114,7 @@ async function mainLoop() {
     log('Starting');
     await login()
     while (!STOP) {
-        await varrockWestSmithing();
+        await varrockWestChopper();
     }
 }
 
