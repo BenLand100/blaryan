@@ -1129,6 +1129,94 @@ var varrock_west_bank_booths = [
     [3186, 3442]
 ];
 
+var HAMMER = 2348;
+//var SMITH_BARS = [['Gold Bar',2358,27,1]];
+//var SMITH_BARS = [['Mith Bar',2356,27,1]];
+//var SMITH_BARS = [['Steel Bar',2354,27,1]];
+//var SMITH_BARS = [['Iron Bar',2352,27,1]];
+var SMITH_BARS = [['Bronze Bar',2350,27,1]];
+var SMITH_ANVIL = [3188, 3425]
+var SMITH_TARGET = [459, 143]; // arrowheads
+
+async function varrockWestSmithing() {
+
+    await handleLogout();
+    await handleRandoms();
+    
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = !SMITH_BARS.every(([name,type,count,min]) => countItem(type) >= min);
+        
+    if (tobank) {
+        //log('Walking to',tobank?'bank':'forest','...');
+        await walkTowards([3183, 3436]);
+        if (dist(myPos(),[3183, 3436]) < 3) {
+            //console.log(new Date().getTime(), 'Arrived');
+            var booth = chooseClosest(myPos(),varrock_west_bank_booths);
+            //console.log(new Date().getTime(),'Booth', booth);
+            await clickMM(booth);
+            await sleep(500);
+            await clickMS(globalToLocal(booth),null,1.0,2);
+            await sleep(500);
+            if (await clickOption(/.*Use-quickly.*/i)) {
+                //console.log(new Date().getTime(),'Used booth...');
+                for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                if (viewportInterfaceID() != 5292) return;
+                //console.log(new Date(S).getTime(),'In bank!');
+                await sleep(500);
+                await depositAll(new Set([HAMMER])); 
+                for (var [itype,icount] of SMITH_BARS.map(([name,type,count,min]) => [type,count])) {
+                    var bpos = await bankFind(itype);
+                    if (bpos === null) {
+                        break;
+                    } else {
+                        await clickBank(bpos,null,2);
+                        await sleep(750);
+                        if (await clickOption(/Withdraw X.*/i)) {
+                            await sleep(1000);
+                            await typetext(String(icount));
+                            await enter();
+                            await sleep(1000);
+                        }
+                    }
+                }
+                await clickMM(myPos());
+                await sleep(1000);
+                if (Math.random() < 0.2)  {
+                    await runOn();
+                    await openTab(TAB_INVENTORY);
+                }
+            }
+            return;
+        } else {
+            return;
+        }
+    }
+    
+    if (dist(SMITH_ANVIL,myPos()) > 2) { //walk to anvil
+        //console.log('Headed to anvil...');
+        await walkTowards(SMITH_ANVIL);
+        await waitForFlag();
+        return;
+    }
+
+    //smelt
+    await openTab(TAB_INVENTORY);
+    var comp = invFind(SMITH_BARS.map(([name,type,count,min]) => type));
+    if (comp === null) return;
+    await clickInv(comp);
+    await sleep(500);
+    await clickMS(globalToLocal(SMITH_ANVIL[0], SMITH_ANVIL[1] + (Math.random() > 0.375 ? 1 : -1)),null,0.1,1);
+    for (var _ = 0; _ < 10 && viewportInterfaceID() != 994; _++) await sleep(500);
+    if (viewportInterfaceID() != 994) return;
+    await mouse(SMITH_TARGET[0],SMITH_TARGET[1],1)
+    WATCHDOG = now();
+    await waitForAnim();
+    for (var _ = 0; _ < 5 && myAnim() == 898; _++) {
+        await sleep(500);
+    }
+}
+
 async function varrockWestChopper() {
 
     await handleLogout();
@@ -1142,7 +1230,6 @@ async function varrockWestChopper() {
         //log('Walking to',tobank?'bank':'forest','...');
         await walkTowards([3183, 3436]);
         if (dist(myPos(),[3183, 3436]) < 3) {
-            WATCHDOG = now();
             //console.log(new Date().getTime(), 'Arrived');
             var booth = chooseClosest(myPos(),varrock_west_bank_booths);
             //console.log(new Date().getTime(),'Booth', booth);
@@ -1237,7 +1324,6 @@ async function draynorChopper() {
         log('Walking to',tobank?'bank':'forest','...');
         await walkTowards([3093, 3243]);
         if (dist(myPos(),[3093, 3243]) < 3) {
-            WATCHDOG = now();
             //console.log(new Date().getTime(), 'Arrived');
             var booth = chooseClosest(myPos(),draynor_bank_booths);
             //console.log(new Date().getTime(),'Booth', booth);
@@ -1340,7 +1426,6 @@ async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count
     if (tobank || x < 2973) {
         //console.log('Walking to',tobank?'bank':'furnace','...');
         if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
-            WATCHDOG = now();
             //console.log(new Date().getTime(), 'Arrived');
             if (tobank) {
                 var booth = chooseClosest(myPos(),falador_west_bank_booths);
@@ -1943,14 +2028,92 @@ async function cowKiller() {
 }
 
 
+var KNIFE = 947,
+    LOG = 1512,
+    SHAFT = 53,
+    FEATHER = 315,
+    HEADLESS = 54,
+    BRONZE_HEAD = 40,
+    IRON_HEAD = 41,
+    FLETCH_TARGET = [101, 423]; // shaft
+async function bankFletcher(action='CUT_SHAFTS') {
+
+    await handleLogout();
+    await handleRandoms();
+    
+    var logs = countItem(LOG),
+        shafts = countItem(SHAFT),
+        feathers = countItem(FEATHER),
+        headless = countItem(HEADLESS),
+        head = countItem(BRONZE_HEAD);
+    
+    var get_from_bank = [],
+        keep_from_bank = [];
+        
+    if (action == 'CUT_SHAFTS') {
+        if (logs == 0) {
+            log('Out of logs');
+            get_from_bank.push([LOG,28]);
+            keep_from_bank.push(KNIFE)
+        } else {
+            log('Finding tools');
+            var iknife = invFind(KNIFE),
+                ilog = invFind(LOG);
+            await sleep(500);
+            if (iknife !== null && ilog !== null) {
+                log('Fletching');
+                await clickInv(iknife);
+                await sleep(500);
+                await clickInv(ilog);
+                await sleep(750);
+                await mouse(FLETCH_TARGET[0]+Math.random()*30-15,FLETCH_TARGET[1]+Math.random()*30-15,1);
+                await sleep(750);
+            }
+            return;
+        }
+    } 
+    
+    var booth = chooseClosest(myPos(),varrock_west_bank_booths);
+    await clickMS(globalToLocal(booth),null,1.0,2);
+    await sleep(500);
+    if (await clickOption(/.*Use-quickly.*/i)) {
+        //console.log(new Date().getTime(),'Used booth...');
+        for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+        if (viewportInterfaceID() != 5292) return;
+        //console.log(new Date(S).getTime(),'In bank!');
+        await sleep(500);
+        await depositAll(new Set(keep_from_bank)); 
+        for (var [itype,icount] of get_from_bank) {
+            var bpos = await bankFind(itype);
+            if (bpos === null) {
+                break;
+            } else {
+                await clickBank(bpos,null,2);
+                await sleep(750);
+                if (await clickOption(/Withdraw X.*/i)) {
+                    await sleep(1000);
+                    await typetext(String(icount));
+                    await enter();
+                    await sleep(1000);
+                }
+            }
+        }
+        await clickMM(myPos());
+        await sleep(1000);
+    }
+    return;
+}
+
+
 var STOP = false;
 var WATCHDOG = now();
 
 async function mainLoop() {
     WATCHDOG = now();
     log('Starting');
+    await login()
     while (!STOP) {
-        await varrockWestChopper();
+        await varrockWestSmithing();
     }
 }
 
