@@ -440,7 +440,7 @@ function localToMS(i, j=null, height=0.0) {
         j = i[1];
         i = i[0];
     }
-    var x = (i << 7) + 64, z = (j << 7) + 64,
+    var x = (i * 128) + 64, z = (j * 128) + 64,
         y = groundHeight(x, z) - height * 128;
     return project_ms(x, y, z);
 }
@@ -874,7 +874,9 @@ async function clickMS(x, z=null, height=0.0, button=1, rand=3) {
     var pos = localToMS(x,z,height=height)
     if (pos !== null) {
         await mouse(pos[0]+rand*Math.random()-rand/2, pos[1]+rand*Math.random()-rand/2, button);
+        return true;
     }
+    return false;
 }
 
 async function clickInv(i, j=null, button=1, rand=4) {
@@ -2287,6 +2289,142 @@ async function simpleBuy(click=[],text=/Buy.*10.*/i) {
     }
 }
 
+var aubury_to_varrock_east = [
+    [3253, 3401],
+    [3253, 3398],
+    [3260, 3405],
+    [3262, 3414],
+    [3262, 3421],
+    [3261, 3426],
+    [3254, 3426],
+    [3254, 3420]
+];
+
+async function auburyEssenceMiner() {
+    await handleLogout();
+    await handleRandoms();
+    await handleLostHead();
+    
+    var ipick = invFind(PICKAXES);
+    if (ipick !== null && !(new Set(PICKAXES).has(heldItem()))) {
+        throw new Error('No pickaxe!');
+    }
+    var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
+        mining_anim = PICKAXE_ANIMS[pickaxe_id];
+        
+    var [x,z] = myPos(),
+        auburyDist = dist([x,z],[3253, 3401]),
+        tobank = freeSlots() == 0;
+    
+    if (auburyDist < 3) {
+        // inside Aubury shop
+        if (tobank) {
+            if (!isWallAt(3253, 3399, 1531)) {
+                await clickMS(globalToLocal(3253, 3398.5), null, 0.5, 2);
+                await sleep(500);
+                if (await clickOption(/Open.*/i)) {
+                    log('Opened the door!');
+                }
+                await sleep(750);
+            }
+            await clickAlong([x,z], aubury_to_varrock_east, true);
+            await sleep(1500);
+        } else {
+            await waitForFlag();
+            var aubury = findNPCs(/Aubury/i);
+            if (aubury.length != 1) throw Error('Cannot find Aubury!');
+            aubury = aubury[0];
+            await clickEntity(aubury,1.0,2);
+            await sleep(1500);
+            if (await clickOption(/Talk-to.*/i)) {
+                await waitForFlag();
+                await sleep(1500);
+                await mouse(302, 463, 1);
+                await sleep(1500);
+                await mouse(258, 455, 1);
+                await sleep(1500);
+                await mouse(210, 464, 1);
+                await sleep(5000);
+            }
+        }
+        return;
+    } else if (auburyDist < 100) {
+        // in varrock
+        if (await clickAlong([x,z], aubury_to_varrock_east, tobank)) {
+            if (tobank) {
+                var booth = chooseClosest(myPos(),varrock_east_bank_booths);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    //console.log(new Date().getTime(),'Used booth...');
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    //console.log(new Date(S).getTime(),'In bank!');
+                    await sleep(500);
+                    await depositAll(); 
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2)  {
+                        await runOn();
+                        await openTab(TAB_INVENTORY);
+                    }
+                }
+            }
+        } else if (auburyDist < 10) {
+            if (!isWallAt(3253, 3399, 1531)) {
+                await clickMS(globalToLocal(3253, 3398.5), null, 1.0, 2);
+                await sleep(500);
+                if (await clickOption(/Open.*/i)) {
+                    log('Opened the door!');
+                }
+                await sleep(750);
+            }
+        }
+        return;
+    } else {
+        // in essence mine
+        if (tobank) {
+            var portals = findObjects(2492,false,null,40),
+                portal = chooseClosest(globalToLocal([x,y]),portals),
+                gportal = localToGlobal(portal);
+            if (await clickMS(portal, null, 0.1, 2)) {
+                await sleep(500);
+                if (await clickOption(/Use.*Portal/i)) {
+                    await waitForFlag();
+                    await sleep(3000);
+                }
+            } else {
+                await walkTowards(gportal);
+                await sleep(1500);
+            }
+        } else {
+            var essence = findObjects(2491,false,null,40),
+                mine = chooseClosest(globalToLocal([x,y]),essence),
+                gmine = localToGlobal(mine);
+                
+            if (!await clickMS(mine, null, 1.5, 2)) {
+                log('Walking to essence', gmine);
+                await walkTowards(gmine[0]+10*Math.random()-5, gmine[1]+10*Math.random()-5);
+                await sleep(1500);
+            } else {
+                await sleep(750);
+                if (await clickOption(/Mine.*Rune.*Essence/)) {
+                    await waitForFlag();
+                    await waitForAnim(5);
+                    if (myAnim() != mining_anim) return;
+                    WATCHDOG = now();
+                    for (var _ = 0; _ < 120 && myAnim() == mining_anim && freeSlots() > 0; _++) {
+                        await handleRandoms();
+                        await handleLostHead();
+                        await sleep(500);
+                    }
+                }
+            }
+        }
+        return;
+    }
+}
+
 
 var STOP = false;
 var WATCHDOG = now();
@@ -2299,9 +2437,10 @@ async function mainLoop() {
         //await walkPath(varrock_west_to_falador_west,true);
         //await miningGuildMiner();
         //await simpleBuy([287,92]); //Mind Runes
-        //await walkPath(falador_east_bank_deathwalk,true);
+        //await walkPath(falador_east_bank_deathwalk,false);
         //await cowKiller();
-        await faladorWestSmelter();
+        //await faladorWestSmelter();
+        await auburyEssenceMiner();
     }
 }
 
