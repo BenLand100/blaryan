@@ -340,27 +340,45 @@ function log(...args) {
     console.log(new Date().toUTCString(),...args);
 }
 
-function startMouseEcho() {
+var VERBOSE = 0;
+
+function startEventDebug() {
+    VERBOSE = 1;
+    
     canvas.addEventListener("mousemove", (event) => {
-        const rect = canvas.getBoundingClientRect();
-        console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        if (VERBOSE > 3) {
+            const rect = canvas.getBoundingClientRect();
+            console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        }
     });
 
     canvas.addEventListener("mouseup", (event) => {
-        const rect = canvas.getBoundingClientRect();
-        console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        if (VERBOSE > 3) {
+            const rect = canvas.getBoundingClientRect();
+            console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        }
     });
 
     canvas.addEventListener("mousedown", (event) => {
-        const rect = canvas.getBoundingClientRect();
-        console.log('mousedown',Math.floor(event.clientX - rect.left), event.clientY - rect.top);
+        if (VERBOSE > 0 && VERBOSE <= 3) {
+            const rect = canvas.getBoundingClientRect();
+            console.log('mousedown',Math.floor(event.clientX - rect.left), event.clientY - rect.top);
+        }
+        if (VERBOSE > 3) {
+            const rect = canvas.getBoundingClientRect();
+            console.log(Math.floor(event.clientX - rect.left), event.clientY - rect.top, event);
+        }
     });
 
     canvas.addEventListener("keydown", (event) => {
-        console.log(event);
+        if (VERBOSE > 1) {
+            console.log(event);
+        }
     })
     canvas.addEventListener("keyup", (event) => {
-        console.log(event);
+        if (VERBOSE > 2) {
+            console.log(event);
+        }
     })
 }
 
@@ -1205,7 +1223,7 @@ async function varrockWestSmithing() {
         return;
     }
 
-    //smelt
+    //smith
     await openTab(TAB_INVENTORY);
     var comp = invFind(SMITH_BARS.map(([name,type,count,min]) => type));
     if (comp === null) return;
@@ -1428,16 +1446,17 @@ var falador_west_bank_booths = [
 ]
 
 //var SMELT_ORES = [['Tin',439,14,1],['Copper',437,14,1]];
-var SMELT_ORES = [['Iron',441,28,1]];
+//var SMELT_ORES = [['Iron',441,28,1]];
+var SMELT_ORES = [['Iron',441,9,1], ['Coal',454,18,2]];
 
-async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count,min]) => type)) {
+async function faladorWestSmelter(ores=SMELT_ORES) {
 
     await handleLogout();
     await handleRandoms();
 
     var free = freeSlots(),
         [x, z] = myPos(),
-        tobank = !SMELT_ORES.every(([name,type,count,min]) => countItem(type) >= min);
+        tobank = !ores.every(([name,type,count,min]) => countItem(type) >= min);
     if (tobank || x < 2973) {
         //console.log('Walking to',tobank?'bank':'furnace','...');
         if (await clickAlong([x,z], falador_smelter_west_bank_path, tobank)) {
@@ -1456,7 +1475,7 @@ async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count
                     //console.log(new Date().getTime(),'In bank!');
                     await sleep(500);
                     await depositAll();
-                    for (var [itype,icount] of SMELT_ORES.map(([name,type,count,min]) => [type,count])) {
+                    for (var [itype,icount] of ores.map(([name,type,count,min]) => [type,count])) {
                         var bpos = await bankFind(itype);
                         if (bpos === null) {
                             break;
@@ -1483,7 +1502,7 @@ async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count
     }
 
     if (z >= 3377 && !isWallAt(2971, 3376, 1531)) { // outside the door
-        await clickMS(globalToLocal(2971,3377.5),null,1.0,2);
+        await clickMS(globalToLocal(2971,3376.5),null,1.0,2);
         await sleep(500);
         if (await clickOption(/Open.*/i)) {
             log('Opened the door!');
@@ -1499,7 +1518,7 @@ async function faladorWestSmelter(ingredients = SMELT_ORES.map(([name,type,count
 
     //smelt
     await openTab(TAB_INVENTORY);
-    var comp = invFind(ingredients);
+    var comp = invFind(ores.map(([name,type,count,min]) => type));
     if (comp === null) return;
     await clickInv(comp);
     await sleep(500);
@@ -2259,6 +2278,15 @@ async function bankFletcher(action='CUT_LOGS') {
     return;
 }
 
+async function simpleBuy(click=[],text=/Buy.*10.*/i) {
+    await mouse(click[0] + Math.random()*16 - 8, click[1] + Math.random()*16 - 8,text !== null ? 2 : 1);
+    await sleep(300);
+    if (text !== null) {
+        await clickOption(text);
+        await sleep(400);
+    }
+}
+
 
 var STOP = false;
 var WATCHDOG = now();
@@ -2269,7 +2297,11 @@ async function mainLoop() {
     await login()
     while (!STOP) {
         //await walkPath(varrock_west_to_falador_west,true);
-        await miningGuildMiner();
+        //await miningGuildMiner();
+        //await simpleBuy([287,92]); //Mind Runes
+        //await walkPath(falador_east_bank_deathwalk,true);
+        //await cowKiller();
+        await faladorWestSmelter();
     }
 }
 
