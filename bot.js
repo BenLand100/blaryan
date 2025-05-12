@@ -1765,6 +1765,22 @@ async function miningGuildMiner() {
     }
 }
 
+var varrock_east_to_varrock_west = [
+    [3254, 3420],
+    [3254, 3427],
+    [3247, 3428],
+    [3239, 3428],
+    [3232, 3428],
+    [3225, 3428],
+    [3218, 3428],
+    [3211, 3425],
+    [3204, 3428],
+    [3197, 3428],
+    [3190, 3430],
+    [3183, 3431],
+    [3182, 3438]
+];
+
 var varrock_west_to_falador_west = [
     [3182, 3439],
     [3182, 3432],
@@ -2385,7 +2401,7 @@ async function auburyEssenceMiner() {
         // in essence mine
         if (tobank) {
             var portals = findObjects(2492,false,null,40),
-                portal = chooseClosest(globalToLocal([x,y]),portals),
+                portal = chooseClosest(globalToLocal([x,z]),portals),
                 gportal = localToGlobal(portal);
             if (await clickMS(portal, null, 0.1, 2)) {
                 await sleep(500);
@@ -2399,10 +2415,10 @@ async function auburyEssenceMiner() {
             }
         } else {
             var essence = findObjects(2491,false,null,40),
-                mine = chooseClosest(globalToLocal([x,y]),essence),
+                mine = chooseClosest(globalToLocal([x,z]),essence),
                 gmine = localToGlobal(mine);
                 
-            if (!await clickMS(mine, null, 1.5, 2)) {
+            if (!await clickMS(mine, null, 2.0, 2)) {
                 log('Walking to essence', gmine);
                 await walkTowards(gmine[0]+10*Math.random()-5, gmine[1]+10*Math.random()-5);
                 await sleep(1500);
@@ -2418,10 +2434,152 @@ async function auburyEssenceMiner() {
                         await handleLostHead();
                         await sleep(500);
                     }
+                } else {
+                    await sleep(2000);
+                    await clickMM(x+Math.random()*4-2, z+Math.random()*4-2);
+                    await waitForFlag();
+                    await sleep(2000);
                 }
             }
         }
         return;
+    }
+}
+
+
+var ITEM_AIR_TALISMAN = 1439, // item air talisman
+    ITEM_RUNE_ESSENCE = 1437, // item rune essence
+    LOC_AIR_RUINS = 2452, // world obj air ruins
+    LOC_AIR_ALTER = 2478, // world obj air alter
+    LOC_AIR_PORTAL = 2465; // world obj air portal
+
+var falador_east_to_air_ruins = [
+    [3013, 3355],
+    [3008, 3350],
+    [3008, 3343],
+    [3008, 3336],
+    [3008, 3329],
+    [3008, 3322],
+    [3002, 3318],
+    [2999, 3311],
+    [2995, 3304],
+    [2988, 3301],
+    [2983, 3296]
+];
+
+async function attemptToInteract(global_coords,option,height=1.0) {
+    var local_coords = globalToLocal(global_coords);
+    if (!await clickMS(local_coords, null, height, 2)) {
+        await walkTowards(global_coords[0]+6*Math.random()-3, global_coords[1]+6*Math.random()-3);
+        await sleep(1500);
+    } else {
+        await sleep(750);
+        if (await clickOption(option)) {
+            await waitForFlag();
+            return true;
+        } else {
+            await sleep(2000);
+            var [x,y] = myPos();
+            await clickMM(x+Math.random()*4-2, z+Math.random()*4-2);
+            await waitForFlag();
+            await sleep(2000);
+        }
+    }
+    return false;
+}
+
+async function airRunecrafter() {
+
+    await handleLogout();
+    await handleRandoms();
+    await handleLostHatchetHead();
+    
+    var italisman = invFind(ITEM_AIR_TALISMAN);
+    if (italisman === null) {
+        throw new Error('No talisman!');
+    }
+
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = free > 14;
+    if (z > 4000) {
+        //air alter
+        if (tobank) {
+            var portals = findObjects(LOC_AIR_PORTAL,false,null,40),
+                portal = chooseClosest(globalToLocal([x,z]),portals),
+                gportal = localToGlobal(portal);
+            if (await attemptToInteract(gportal, /Use.*portal/i, 0.5)) {
+                await waitForFlag();
+                await sleep(3000);
+            } else {
+                await sleep(1000);
+            }
+        } else {
+            var portals = findObjects(LOC_AIR_ALTER,false,null,40),
+                portal = chooseClosest(globalToLocal([x,z]),portals),
+                gportal = localToGlobal(portal);
+            if (await attemptToInteract(gportal, /Craft-rune.*/i, 0.5)) {
+                await waitForFlag();
+                await sleep(3000);
+            } else {
+                await sleep(1000);
+            }
+        }
+    } else {
+        if (await clickAlong([x,z], falador_east_to_air_ruins, !tobank)) {
+            //console.log(new Date().getTime(), 'Arrived');
+            if (tobank) {
+                var booth = chooseClosest(myPos(),falador_east_bank_booths);
+                //console.log(new Date().getTime(),'Booth', booth);
+                await clickMM(booth);
+                await sleep(500);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    //console.log(new Date().getTime(),'Used booth...');
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    //console.log(new Date().getTime(),'In bank!');
+                    await sleep(500);
+                    await depositAll(new Set([ITEM_AIR_TALISMAN]));
+                    for (var [itype,icount] of [[ITEM_RUNE_ESSENCE,27]]) {
+                        var bpos = await bankFind(itype);
+                        if (bpos === null) {
+                            break;
+                        } else {
+                            await clickBank(bpos,null,2);
+                            await sleep(750);
+                            if (await clickOption(/Withdraw X.*/i)) {
+                                await sleep(1000);
+                                await typetext(String(icount));
+                                await enter();
+                                await sleep(1000);
+                            }
+                        }
+                    }
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.2) await runOn();
+                }
+                return;
+            } else {
+                var alter = findObjects(LOC_AIR_RUINS);
+                if (alter.length == 0) {
+                    await sleep(500);
+                    return;
+                }
+                alter = localToGlobal(chooseClosest(globalToLocal([x,z]), alter));
+                await clickInv(italisman);
+                await sleep(750);
+                if (await attemptToInteract(alter, /Use.*Mysterious.*ruins/i, 0.5)) {
+                    await waitForFlag();
+                    await sleep(3000);
+                }
+            }
+        } else {
+            await sleep(1500);
+            return;
+        }
     }
 }
 
@@ -2440,7 +2598,9 @@ async function mainLoop() {
         //await walkPath(falador_east_bank_deathwalk,false);
         //await cowKiller();
         //await faladorWestSmelter();
-        await auburyEssenceMiner();
+        //await auburyEssenceMiner();
+        //await walkPath(varrock_east_to_varrock_west.concat(varrock_west_to_falador_west.concat(falador_west_to_falador_east)),true);
+        await airRunecrafter();
     }
 }
 
