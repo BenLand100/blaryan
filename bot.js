@@ -2479,7 +2479,7 @@ async function attemptToInteract(global_coords,option,height=1.0) {
             return true;
         } else {
             await sleep(2000);
-            var [x,y] = myPos();
+            var [x,z] = myPos();
             await clickMM(x+Math.random()*4-2, z+Math.random()*4-2);
             await waitForFlag();
             await sleep(2000);
@@ -2569,6 +2569,8 @@ async function airRunecrafter() {
                     return;
                 }
                 alter = localToGlobal(chooseClosest(globalToLocal([x,z]), alter));
+                await openTab(TAB_INVENTORY);
+                await sleep(500);
                 await clickInv(italisman);
                 await sleep(750);
                 if (await attemptToInteract(alter, /Use.*Mysterious.*ruins/i, 0.5)) {
