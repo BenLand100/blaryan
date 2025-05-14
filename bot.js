@@ -38,7 +38,10 @@ function npcByID(npc_id) {
     return document.client['nM'][npc_id];
 }
 function npcName(npc) {
-    return npc['pT'] === null ? '' : npc['pT']['name'];
+    return npc['pT'] === null ? null : npc['pT']['name'];
+}
+function npcLevel(npc) {
+    return npc['pT'] === null ? null : npc['pT']['h0'];
 }
 
 function afterMe(npc) {
@@ -1669,6 +1672,7 @@ async function miningGuildMiner() {
         coal = countItem(454),
         free = freeSlots(),
         [x, z] = myPos();
+        
     if (free == 0 || z < 4000) {
         var tobank = free == 0;
         //console.log('Walking to',tobank?'bank':'mine','...');
@@ -1709,7 +1713,7 @@ async function miningGuildMiner() {
 
     await handleLostHead();
 
-    var toFind = mith*6 < coal ? [2102, 2103] : [2096, 2097]; //mith
+    var toFind = Math.floor(coal/6) > mith ? [2102, 2103] : [2096, 2097]; //mith:coal
     var objs = findObjects(toFind,false,null,35);
     objs = objs.filter(pos => localToGlobal(pos)[1] < 9750);
     //log('mith:',objs.length);
@@ -2154,7 +2158,10 @@ async function chickenKiller() {
     await sleep(500);
 }
 
-async function cowKiller() {
+var AIR_RUNE = 557,
+    MIND_RUNE = 559;
+
+async function cowKiller(magic=true) {
 
     await handleLogout();
     await handleRandoms();
@@ -2164,22 +2171,112 @@ async function cowKiller() {
         await buryBones();
     } else {
         //log('collect');
-        await pickupItems([527,315], /Take.*(Bones|Feathers).*/i); // Bones & Feathers
+        for (var i = 0; i < 2; i++) {
+            await pickupItems([527,555,556,557,558,559,560,561,562,563,564,565,566,567,996,997,998,999,1000,1001,1002,1003,1004,1005], /Take.*(Bones|Rune|Coins).*/i);
+            await sleep(250);
+        }
     }
 
-    var mobs = findNPCs(/Cow/i);
-    mobs.filter(m => entityTargetID(m) == -1);
-    if (mobs.length < 1) {
-        //log('going long');
-        mobs = findNPCs(/Cow/i,false,50);
+    var after_me = findNPCs(/Cow/i,false,50).filter(mob => afterMe(mob)),
+        mobs = [];
+    if (after_me.length == 0) {
+        mobs = findNPCs(/Cow/i).filter(m => entityTargetID(m) == -1);
+        if (mobs.length < 1) {
+            mobs = findNPCs(/Cow/i,false,50).filter(m => entityTargetID(m) == -1);
+        }
+        if (mobs.length < 1) {
+            log('No mobs');
+            await sleep(5000);
+            return;
+        }
     }
-    if (mobs.length < 1) {
-        log('No mobs');
-        await sleep(5000);
+
+    var target = after_me.length > 0 ? after_me[0] : chooseRandom(mobs),
+        mind_count = magic ? countItem(MIND_RUNE) : -1,
+        air_count = magic ? countItem(AIR_RUNE) : -1;
+    log(mind_count,air_count);
+    if (mind_count < 1 || air_count < 2) {
+        await logout();
+        throw new Error('Out of runes!');
+    }
+    
+    if (!await clickEntity(target,1.0)) {
+        await walkTowards(localToGlobal(entityToLocal(target)));
+        await waitForFlag();
         return;
     }
 
-    var target = chooseRandom(mobs);
+    for (var i = 0; i < 8; i++) {
+        target = entityTargetID(player());
+        if (target != -1) break;
+        await sleep(250);
+    }
+    if (target == -1) return;
+
+    WATCHDOG = now();
+    //log('Murdering', target);
+    for (var i = 0; i < 30; i++) {
+        if (entityTargetID(player()) != target) {
+            if (Math.random() < 0.05) {
+                await runOn();
+                await openTab(TAB_INVENTORY);
+            }
+            break;
+        }
+        //log('...');
+        await handleRandoms();
+        await sleep(500);
+    }
+    if (magic && countItem(AIR_RUNE) - air_count == 0 && countItem(MIND_RUNE) - mind_count == 0) {
+        var tab = currentTab();
+        await openTab(TAB_COMBAT); 
+        await sleep(750);
+        await mouse(727, 449,1); // choose spell
+        await sleep(750);
+        await mouse(714, 250,1); // fire strike
+        await sleep(750);
+        await mouse(607, 462,1); // cast spell
+        await sleep(750);
+        openTab(TAB_INVENTORY);
+    }
+    await sleep(500);
+
+}
+
+
+async function wizardKiller(magic=true) {
+
+    await handleLogout();
+    await handleRandoms();
+
+    if (freeSlots() < 1) {
+        //log('bury');
+        await buryBones();
+    } else {
+        //log('collect');
+        for (var i = 0; i < 3; i++) {
+            await pickupItems([527,555,556,557,558,559,560,561,562,563,564,565,566,567,996,997,998,999,1000,1001,1002,1003,1004,1005], /Take.*(Bones|Rune|Coins).*/i);
+            await sleep(250);
+        }
+    }
+
+    var after_me = findNPCs(/Wizard/i,false,50).filter(m => npcLevel(m) == 7 && afterMe(m)),
+        mobs = [];
+    if (after_me.length == 0) {
+        mobs = findNPCs(/Wizard/i).filter(m => entityTargetID(m) == -1 && npcLevel(m) == 7);
+        if (mobs.length < 1) {
+            mobs = findNPCs(/Wizard/i,false,50).filter(m => entityTargetID(m) == -1 && npcLevel(m) == 7);
+        }
+        if (mobs.length < 1) {
+            log('No mobs');
+            await sleep(5000);
+            return;
+        }
+    }
+
+    var target = after_me.length > 0 ? after_me[0] : chooseRandom(mobs),
+        mind_count = magic ? countItem(MIND_RUNE) : -1,
+        air_count = magic ? countItem(AIR_RUNE) : -1;
 
     if (!await clickEntity(target,1.0)) {
         await walkTowards(localToGlobal(entityToLocal(target)));
@@ -2207,6 +2304,18 @@ async function cowKiller() {
         //log('...');
         await handleRandoms();
         await sleep(500);
+    }
+    if (magic && countItem(AIR_RUNE) - air_count == 0 && countItem(MIND_RUNE) - mind_count == 0) {
+        var tab = currentTab();
+        await openTab(TAB_COMBAT); 
+        await sleep(750);
+        await mouse(727, 449,1); // choose spell
+        await sleep(750);
+        await mouse(714, 250,1); // fire strike
+        await sleep(750);
+        await mouse(607, 462,1); // cast spell
+        await sleep(750);
+        openTab(TAB_INVENTORY);
     }
     await sleep(500);
 
@@ -2446,7 +2555,6 @@ async function auburyEssenceMiner() {
     }
 }
 
-
 var ITEM_AIR_TALISMAN = 1439, // item air talisman
     ITEM_RUNE_ESSENCE = 1437, // item rune essence
     LOC_AIR_RUINS = 2452, // world obj air ruins
@@ -2455,11 +2563,12 @@ var ITEM_AIR_TALISMAN = 1439, // item air talisman
 
 var falador_east_to_air_ruins = [
     [3013, 3355],
-    [3008, 3350],
-    [3008, 3343],
+    [3010, 3358],
+    [3007, 3350],
+    [3007, 3343],
     [3008, 3336],
-    [3008, 3329],
-    [3008, 3322],
+    [3009, 3329],
+    [3009, 3322],
     [3002, 3318],
     [2999, 3311],
     [2995, 3304],
@@ -2492,7 +2601,6 @@ async function airRunecrafter() {
 
     await handleLogout();
     await handleRandoms();
-    await handleLostHatchetHead();
     
     var italisman = invFind(ITEM_AIR_TALISMAN);
     if (italisman === null) {
@@ -2519,6 +2627,7 @@ async function airRunecrafter() {
                 portal = chooseClosest(globalToLocal([x,z]),portals),
                 gportal = localToGlobal(portal);
             if (await attemptToInteract(gportal, /Craft-rune.*/i, 0.5)) {
+                WATCHDOG = now();
                 await waitForFlag();
                 await sleep(3000);
             } else {
@@ -2559,7 +2668,7 @@ async function airRunecrafter() {
                     }
                     await clickMM(myPos());
                     await sleep(1000);
-                    if (Math.random() < 0.2) await runOn();
+                    if (Math.random() < 0.4) await runOn();
                 }
                 return;
             } else {
@@ -2585,6 +2694,139 @@ async function airRunecrafter() {
     }
 }
 
+var ITEM_MIND_TALISMAN = 1449, // item air talisman
+    LOC_MIND_RUINS = 2453, // world obj air ruins
+    LOC_MIND_ALTER = 2479, // world obj air alter
+    LOC_MIND_PORTAL = 2466; // world obj air portal
+    
+
+var falador_west_to_mind_ruins = [
+    [2946, 3368],
+    [2949, 3376],
+    [2956, 3379],
+    [2961, 3384],
+    [2965, 3391],
+    [2965, 3398],
+    [2965, 3405],
+    [2969, 3411],
+    [2976, 3415],
+    [3004, 3455],
+    [2981, 3416],
+    [2986, 3421],
+    [2988, 3428],
+    [2984, 3435],
+    [2979, 3440],
+    [2975, 3447],
+    [2971, 3454],
+    [2967, 3460],
+    [2966, 3467],
+    [2965, 3474],
+    [2968, 3481],
+    [2973, 3487],
+    [2976, 3494],
+    [2980, 3501],
+    [2979, 3508],
+    [2980, 3515]
+];
+
+
+async function mindRunecrafter() {
+
+    await handleLogout();
+    await handleRandoms();
+    
+    var italisman = invFind(ITEM_MIND_TALISMAN);
+    if (italisman === null) {
+        throw new Error('No talisman!');
+    }
+
+    var free = freeSlots(),
+        [x, z] = myPos(),
+        tobank = free > 14;
+    if (z > 4000) {
+        //mind alter
+        if (tobank) {
+            var portals = findObjects(LOC_MIND_PORTAL,false,null,40),
+                portal = chooseClosest(globalToLocal([x,z]),portals),
+                gportal = localToGlobal(portal);
+            if (await attemptToInteract(gportal, /Use.*portal/i, 0.5)) {
+                await waitForFlag();
+                await sleep(3000);
+            } else {
+                await sleep(1000);
+            }
+        } else {
+            var portals = findObjects(LOC_MIND_ALTER,false,null,40),
+                portal = chooseClosest(globalToLocal([x,z]),portals),
+                gportal = localToGlobal(portal);
+            if (await attemptToInteract(gportal, /Craft-rune.*/i, 0.5)) {
+                WATCHDOG = now();
+                await waitForFlag();
+                await sleep(3000);
+            } else {
+                await sleep(1000);
+            }
+        }
+    } else {
+        if (await clickAlong([x,z], falador_west_to_mind_ruins, !tobank)) {
+            //console.log(new Date().getTime(), 'Arrived');
+            if (tobank) {
+                var booth = chooseClosest(myPos(),falador_west_bank_booths);
+                //console.log(new Date().getTime(),'Booth', booth);
+                await clickMM(booth);
+                await sleep(500);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    //console.log(new Date().getTime(),'Used booth...');
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    //console.log(new Date().getTime(),'In bank!');
+                    await sleep(500);
+                    await depositAll(new Set([ITEM_MIND_TALISMAN]));
+                    for (var [itype,icount] of [[ITEM_RUNE_ESSENCE,27]]) {
+                        var bpos = await bankFind(itype);
+                        if (bpos === null) {
+                            break;
+                        } else {
+                            await clickBank(bpos,null,2);
+                            await sleep(750);
+                            if (await clickOption(/Withdraw X.*/i)) {
+                                await sleep(1000);
+                                await typetext(String(icount));
+                                await enter();
+                                await sleep(1000);
+                            }
+                        }
+                    }
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.4) await runOn();
+                }
+                return;
+            } else {
+                var alter = findObjects(LOC_MIND_RUINS);
+                if (alter.length == 0) {
+                    await sleep(500);
+                    return;
+                }
+                alter = localToGlobal(chooseClosest(globalToLocal([x,z]), alter));
+                await openTab(TAB_INVENTORY);
+                await sleep(500);
+                await clickInv(italisman);
+                await sleep(750);
+                if (await attemptToInteract(alter, /Use.*Mysterious.*ruins/i, 0.5)) {
+                    await waitForFlag();
+                    await sleep(3000);
+                }
+            }
+        } else {
+            await sleep(1000);
+            return;
+        }
+    }
+}
+
 
 var STOP = false;
 var WATCHDOG = now();
@@ -2597,12 +2839,14 @@ async function mainLoop() {
         //await walkPath(varrock_west_to_falador_west,true);
         //await miningGuildMiner();
         //await simpleBuy([287,92]); //Mind Runes
-        //await walkPath(falador_east_bank_deathwalk,false);
+        //await walkPath(falador_east_bank_deathwalk,true);
         //await cowKiller();
+        await wizardKiller();
         //await faladorWestSmelter();
         //await auburyEssenceMiner();
         //await walkPath(varrock_east_to_varrock_west.concat(varrock_west_to_falador_west.concat(falador_west_to_falador_east)),true);
-        await airRunecrafter();
+        //await airRunecrafter();
+        //await mindRunecrafter();
     }
 }
 
