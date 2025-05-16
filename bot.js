@@ -957,6 +957,8 @@ async function pickupItems(items,name_pattern=/Take.*/i) {
                     await sleep(500);
                 }
                 return true;
+            } else {
+                mouse(Math.random()*500,Math.random()*400);
             }
         }
     }
@@ -2215,10 +2217,10 @@ async function omniKiller(what=/Cow/i,extra_filter=null,npc_fail_tracker=null,es
         mobs = [];
     if (extra_filter !== null) after_me = after_me.filter(extra_filter);
     if (after_me.length == 0) {
-        mobs = findNPCs(what,true,null,true).filter(([m,id]) => { return entityTargetID(m) == -1 && (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true); });
+        mobs = findNPCs(what,true,null,true).filter(([m,id]) => { return entityTargetID(m) == -1 && (npc_fail_tracker === null || (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true)); });
         if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         if (mobs.length < 1) {
-            mobs = findNPCs(what,false,null,true).filter(([m,id]) => entityTargetID(m) == -1 && (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true));
+            mobs = findNPCs(what,false,null,true).filter(([m,id]) => entityTargetID(m) == -1 && (npc_fail_tracker === null || (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true)));
             if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         }
         if (mobs.length < 1) {
@@ -2250,8 +2252,10 @@ async function omniKiller(what=/Cow/i,extra_filter=null,npc_fail_tracker=null,es
         await sleep(250);
     }
     if (my_target_id == -1) {
-        npc_fail_tracker[target_id] = target_id in npc_fail_tracker ? npc_fail_tracker[target_id]+1 : 1;
-        log('No path...', target_id, npc_fail_tracker[target_id]);
+        if (npc_fail_tracker !== null) {
+            npc_fail_tracker[target_id] = target_id in npc_fail_tracker ? npc_fail_tracker[target_id]+1 : 1;
+            log('No path...', target_id, npc_fail_tracker[target_id]);
+        }
         return;
     }
     var actual_target = npcByID(my_target_id);
@@ -2261,11 +2265,6 @@ async function omniKiller(what=/Cow/i,extra_filter=null,npc_fail_tracker=null,es
     log('Murdering', my_target_id);
     for (var i = 0; i < 60; i++) {
         if (entityTargetID(player()) != my_target_id) {
-            /*if (npcHealth(actual_target) > 0 || npcTotalHealth(actual_target) == 0) {
-                npc_fail_tracker[target_id] = target_id in npc_fail_tracker ? npc_fail_tracker[target_id]+1 : 1;
-                log('Can\'t reach...', my_target_id, npc_fail_tracker[target_id]);
-                return;
-            }*/
             if (Math.random() < 0.05) {
                 await runOn();
                 await openTab(TAB_INVENTORY);
@@ -2864,11 +2863,11 @@ async function mainLoop() {
         
         await omniKiller(/Barbarian/i, ([m,id]) => { 
             var gpos = localToGlobal(entityToLocal(m)); 
-            return gpos[1] < 3435 &&
+            return gpos[1] < 3435 && gpos[0] < 3094 &&
                    !(gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445) &&
                    !(gpos[0] >= 2080 && gpos[0] <= 3085 && gpos[1] >= 3427 && gpos[1] <= 3432) &&
                    !(gpos[0] >= 3073 && gpos[0] <= 3079 && gpos[1] >= 3410 && gpos[1] <= 3415);
-        }, blacklist, escapeBarbVillage);
+        }, null, escapeBarbVillage);
         
         //await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = localToGlobal(entityToLocal(m)); return gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445; });
         //await omniKiller(/Wizard/i, ([m,id]) => npcLevel(m) == 7);
