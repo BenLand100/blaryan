@@ -31,8 +31,11 @@ for (let i = 0x0; i < this['U3']; i++) {
 function totalNPCs() {
     return document.client['U3'];
 }
+function getNPCID(i) {
+    return document.client['nW'][i];
+}
 function getNPC(i) {
-    return document.client['nM'][document.client['nW'][i]];
+    return document.client['nM'][getNPCID(i)];
 }
 function npcByID(npc_id) {
     return document.client['nM'][npc_id];
@@ -43,7 +46,12 @@ function npcName(npc) {
 function npcLevel(npc) {
     return npc['pT'] === null ? null : npc['pT']['h0'];
 }
-
+function npcHealth(npc) {
+    return npc['PK']; //0x1e * bj['PK'] / bj['Pn']
+}
+function npcTotalHealth(npc) {
+    return npc['Pn']; //0x1e * bj['PK'] / bj['Pn']
+}
 function afterMe(npc) {
     return entityTargetID(npc) - 32768 == playerID();
 }
@@ -115,6 +123,10 @@ function myAnim() {
 
 function currentLevel() {
     return document.client['v1']
+}
+
+function collisionMap() {
+    return document.client['ND'][currentLevel()]['QM'];
 }
 
 function groundItems(i, j) {
@@ -416,6 +428,16 @@ function dumpWalls() {
     findWalls(0, true, null, 1, true);
 }
 
+function dumpCollisionMap() {
+    var [x,z] = globalToLocal(myPos());
+    var map = collisionMap();
+    for (var i = Math.max(0,x-1); i < Math.min(104,x+2); i++) {    
+        for (var j = Math.max(0,z-1); j < Math.min(104,z+2); j++) {
+            console.log(i,j,map[i*104+j]);
+        }
+    }
+}
+
 function entityToLocal(entity) {
     var pos = entityPos(entity);
     if (pos === null) return pos;
@@ -467,14 +489,14 @@ function e2tDist(a, i, j = null) {
     return Math.sqrt(Math.pow(entityX(a) - i*128 - 64, 2.0) + Math.pow(entityZ(a) - j*128 - 64, 2.0)) / 128;
 }
 
-function findNPCs(pattern, visible=true, nearby=null) {
+function findNPCs(pattern, visible=true, nearby=null, ids_too = false) {
     var npcs = [];
     for (var i = 0; i < totalNPCs(); i++) {
-        var npc = getNPC(i);
+        var id = getNPCID(i), npc = npcByID(id);
         if (npc != null && npcName(npc).match(pattern)) {
             if (visible && entityToMS(npc) == null) continue;
             if (nearby !== null && e2eDist(player(),npc) > nearby) continue;
-            npcs.push(npc)
+            npcs.push(ids_too ? [npc,id] : npc)
         }
     }
     return npcs;
@@ -753,32 +775,32 @@ async function openTab(tab) {
     }
 
     if (tab == TAB_COMBAT) { // Combat
-        await mouse(566,211,1);
+        await mouse(566+Math.random()*10-5,211+Math.random()*10-5,1);
     } else if (tab == TAB_STATS) { // Stats
-        await mouse(594,211,1);
+        await mouse(594+Math.random()*10-5,211+Math.random()*10-5,1);
     } else if (tab == 2) { // Quests
-        await mouse(620,211,1);
+        await mouse(620+Math.random()*10-5,211+Math.random()*10-5,1);
     } else if (tab == TAB_INVENTORY) { // Inventory
-        await mouse(658,211,1);
+        await mouse(658+Math.random()*10-5,211+Math.random()*10-5,1);
     } else if (tab == TAB_EQUIPMENT) { // Inventory
-        await mouse(690,211,1);
+        await mouse(690+Math.random()*10-5,211+Math.random()*10-5,1);
     } else if (tab == TAB_RUN) { // Run
-        await mouse(722,511,1);
+        await mouse(722+Math.random()*10-5,511+Math.random()*10-5,1);
     }
 }
 
 async function runOn() {
     await openTab(TAB_RUN);
     await sleep(500);
-    await mouse(630,292,1);
+    await mouse(630+Math.random()*10-5,292+Math.random()*10-5,1);
     await sleep(500);
 }
 
 async function logout() {
     if (!ingame()) return true;
-    await mouse(657, 509, 1);
+    await mouse(657+Math.random()*10-5, 509+Math.random()*10-5, 1);
     await sleep(500);
-    await mouse(638, 396, 1);
+    await mouse(638+Math.random()*10-5, 396+Math.random()*10-5, 1);
     await sleep(1000);
     return !ingame();
 }
@@ -789,26 +811,26 @@ async function login(username=null, password=null) {
         username = USERNAME;
         password = PASSWORD;
     }
-    await mouse(472, 338, 1);
+    await mouse(472+Math.random()*10-5, 338+Math.random()*10-5, 1);
     await sleep(500);
-    await mouse(474, 308, 1);
+    await mouse(474+Math.random()*10-5, 308+Math.random()*10-5, 1);
     await sleep(500);
-    await mouse(382, 268, 1);
+    await mouse(382+Math.random()*10-5, 268+Math.random()*4-2, 1);
     await sleep(500);
     await typetext(username);
     await sleep(500);
-    await mouse(382, 285, 1);
+    await mouse(382+Math.random()*10-5, 285+Math.random()*4-2, 1);
     await sleep(500);
     await typetext(password);
     await sleep(500);
-    await mouse(331, 335, 1);
+    await mouse(331+Math.random()*10-5, 335+Math.random()*10-5, 1);
     await sleep(500);
     for (var i = 0; i < 5 && !ingame(); i++) {
         await sleep(1000);
     }
     if (ingame()) {
         await sleep(1500);
-        await mouse(457, 97, 1);
+        await mouse(457+Math.random()*10-5, 97+Math.random()*4-2, 1);
         await sleep(500);
         await holdKey('ArrowUp')
         await sleep(4000);
@@ -923,7 +945,7 @@ async function pickupItems(items,name_pattern=/Take.*/i) {
         var locs = findItems(set);
         if (locs.length < 1) break;
 
-        var p = chooseRandom(locs)
+        var p = chooseClosest(globalToLocal(myPos()), locs)
         var xy = localToMS(p);
 
         if (xy !== null) {
@@ -1636,7 +1658,7 @@ var falador_east_bank_booths = [
     [3015, 3354],
 ]
 
-async function escapeMine(npc= null) {
+async function escapeMine(npc = null) {
     if (npc !== null) log('Escaping from',npcName(npc));
     var tries = 0;
     while (!STOP && (npc === null || (npcName(npc) !== null && npcName(npc).length > 0))) {
@@ -2160,29 +2182,44 @@ async function chickenKiller() {
 
 var AIR_RUNE = 557,
     MIND_RUNE = 559;
+    
+var PICKUP_ALWAYS = [
+        527, 533, //bones
+        883, 885, 887, 889, 891, 893, 895, 896, 897, 898, 903, 904, 905, 906, 911, 912, 913, 914, // arrows through steel
+        1453, 1455, 1457, 1459, 1461, 1463, //rare talismans
+        555,556,557,558,559,560,561,562,563,564,565,566,567, // runes
+        996,997,998,999,1000,1001,1002,1003,1004,1005, // coins
+        1250, 2367, 2369, //dragon spear/shield
+        1616, 1618, // dragstone/diamond
+        986, 988 //keyhalves
+    ],
+    PICKUP_OPT = /Take.*(Bones|Rune|Coins|Talisman|Drag|Key|Arrow|Diamond).*/i;
 
-async function cowKiller(magic=true) {
+async function omniKiller(what=/Cow/i,extra_filter=null,npc_fail_tracker=null,escapeFn=null,pickup=PICKUP_ALWAYS,pickup_opt=PICKUP_OPT,pickup_cycles=3,magic=true) {
 
     await handleLogout();
-    await handleRandoms();
+    await handleRandoms(escapeFn);
 
     if (freeSlots() < 1) {
         //log('bury');
         await buryBones();
     } else {
         //log('collect');
-        for (var i = 0; i < 2; i++) {
-            await pickupItems([527,555,556,557,558,559,560,561,562,563,564,565,566,567,996,997,998,999,1000,1001,1002,1003,1004,1005], /Take.*(Bones|Rune|Coins).*/i);
+        for (var i = 0; i < 4; i++) {
+            await pickupItems(pickup, pickup_opt);
             await sleep(250);
         }
     }
-
-    var after_me = findNPCs(/Cow/i,false,50).filter(mob => afterMe(mob)),
+    
+    var after_me = findNPCs(what,false,50,true).filter(([mob,id]) => afterMe(mob)),
         mobs = [];
+    if (extra_filter !== null) after_me = after_me.filter(extra_filter);
     if (after_me.length == 0) {
-        mobs = findNPCs(/Cow/i).filter(m => entityTargetID(m) == -1);
+        mobs = findNPCs(what,true,null,true).filter(([m,id]) => { return entityTargetID(m) == -1 && (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true); });
+        if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         if (mobs.length < 1) {
-            mobs = findNPCs(/Cow/i,false,50).filter(m => entityTargetID(m) == -1);
+            mobs = findNPCs(what,false,null,true).filter(([m,id]) => entityTargetID(m) == -1 && (id in npc_fail_tracker ? npc_fail_tracker[id] < 3 : true));
+            if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         }
         if (mobs.length < 1) {
             log('No mobs');
@@ -2191,11 +2228,11 @@ async function cowKiller(magic=true) {
         }
     }
 
-    var target = after_me.length > 0 ? after_me[0] : chooseRandom(mobs),
+    var [target, target_id] = after_me.length > 0 ? after_me[0] : chooseRandom(mobs),
         mind_count = magic ? countItem(MIND_RUNE) : -1,
         air_count = magic ? countItem(AIR_RUNE) : -1;
-    log(mind_count,air_count);
-    if (mind_count < 1 || air_count < 2) {
+    
+    if (magic && (mind_count < 1 || air_count < 2)) {
         await logout();
         throw new Error('Out of runes!');
     }
@@ -2205,118 +2242,53 @@ async function cowKiller(magic=true) {
         await waitForFlag();
         return;
     }
-
+    
+    var my_target_id = -1;
     for (var i = 0; i < 8; i++) {
-        target = entityTargetID(player());
-        if (target != -1) break;
+        my_target_id = entityTargetID(player());
+        if (my_target_id != -1) break;
         await sleep(250);
     }
-    if (target == -1) return;
-
-    WATCHDOG = now();
-    //log('Murdering', target);
-    for (var i = 0; i < 30; i++) {
-        if (entityTargetID(player()) != target) {
-            if (Math.random() < 0.05) {
-                await runOn();
-                await openTab(TAB_INVENTORY);
-            }
-            break;
-        }
-        //log('...');
-        await handleRandoms();
-        await sleep(500);
-    }
-    if (magic && countItem(AIR_RUNE) - air_count == 0 && countItem(MIND_RUNE) - mind_count == 0) {
-        var tab = currentTab();
-        await openTab(TAB_COMBAT); 
-        await sleep(750);
-        await mouse(727, 449,1); // choose spell
-        await sleep(750);
-        await mouse(714, 250,1); // fire strike
-        await sleep(750);
-        await mouse(607, 462,1); // cast spell
-        await sleep(750);
-        openTab(TAB_INVENTORY);
-    }
-    await sleep(500);
-
-}
-
-
-async function wizardKiller(magic=true) {
-
-    await handleLogout();
-    await handleRandoms();
-
-    if (freeSlots() < 1) {
-        //log('bury');
-        await buryBones();
-    } else {
-        //log('collect');
-        for (var i = 0; i < 3; i++) {
-            await pickupItems([527,555,556,557,558,559,560,561,562,563,564,565,566,567,996,997,998,999,1000,1001,1002,1003,1004,1005], /Take.*(Bones|Rune|Coins).*/i);
-            await sleep(250);
-        }
-    }
-
-    var after_me = findNPCs(/Wizard/i,false,50).filter(m => npcLevel(m) == 7 && afterMe(m)),
-        mobs = [];
-    if (after_me.length == 0) {
-        mobs = findNPCs(/Wizard/i).filter(m => entityTargetID(m) == -1 && npcLevel(m) == 7);
-        if (mobs.length < 1) {
-            mobs = findNPCs(/Wizard/i,false,50).filter(m => entityTargetID(m) == -1 && npcLevel(m) == 7);
-        }
-        if (mobs.length < 1) {
-            log('No mobs');
-            await sleep(5000);
-            return;
-        }
-    }
-
-    var target = after_me.length > 0 ? after_me[0] : chooseRandom(mobs),
-        mind_count = magic ? countItem(MIND_RUNE) : -1,
-        air_count = magic ? countItem(AIR_RUNE) : -1;
-
-    if (!await clickEntity(target,1.0)) {
-        await walkTowards(localToGlobal(entityToLocal(target)));
-        await waitForFlag();
+    if (my_target_id == -1) {
+        npc_fail_tracker[target_id] = target_id in npc_fail_tracker ? npc_fail_tracker[target_id]+1 : 1;
+        log('No path...', target_id, npc_fail_tracker[target_id]);
         return;
     }
-
-    for (var i = 0; i < 8; i++) {
-        target = entityTargetID(player());
-        if (target != -1) break;
-        await sleep(250);
-    }
-    if (target == -1) return;
-
+    var actual_target = npcByID(my_target_id);
+    if (actual_target === null) return;
+    
     WATCHDOG = now();
-    //log('Murdering', target);
-    for (var i = 0; i < 30; i++) {
-        if (entityTargetID(player()) != target) {
+    log('Murdering', my_target_id);
+    for (var i = 0; i < 60; i++) {
+        if (entityTargetID(player()) != my_target_id) {
+            /*if (npcHealth(actual_target) > 0 || npcTotalHealth(actual_target) == 0) {
+                npc_fail_tracker[target_id] = target_id in npc_fail_tracker ? npc_fail_tracker[target_id]+1 : 1;
+                log('Can\'t reach...', my_target_id, npc_fail_tracker[target_id]);
+                return;
+            }*/
             if (Math.random() < 0.05) {
                 await runOn();
                 await openTab(TAB_INVENTORY);
             }
+            if (magic && (countItem(AIR_RUNE) - air_count == 0) && (countItem(MIND_RUNE) - mind_count == 0)) {
+                var tab = currentTab();
+                await openTab(TAB_COMBAT); 
+                await sleep(750);
+                await mouse(727+Math.random()*10-5, 449+Math.random()*10-5, 1); // choose spell
+                await sleep(750);
+                await mouse(714+Math.random()*4-2, 250+Math.random()*4-2, 1); // fire strike
+                await sleep(750);
+                await mouse(607+Math.random()*10-5, 462+Math.random()*10-5,1); // cast spell
+                await sleep(750);
+                openTab(TAB_INVENTORY);
+            }
             break;
         }
         //log('...');
-        await handleRandoms();
+        await handleRandoms(escapeFn);
         await sleep(500);
     }
-    if (magic && countItem(AIR_RUNE) - air_count == 0 && countItem(MIND_RUNE) - mind_count == 0) {
-        var tab = currentTab();
-        await openTab(TAB_COMBAT); 
-        await sleep(750);
-        await mouse(727, 449,1); // choose spell
-        await sleep(750);
-        await mouse(714, 250,1); // fire strike
-        await sleep(750);
-        await mouse(607, 462,1); // cast spell
-        await sleep(750);
-        openTab(TAB_INVENTORY);
-    }
+    
     await sleep(500);
 
 }
@@ -2464,11 +2436,11 @@ async function auburyEssenceMiner() {
             if (await clickOption(/Talk-to.*/i)) {
                 await waitForFlag();
                 await sleep(1500);
-                await mouse(302, 463, 1);
+                await mouse(302+Math.random()*10-5, 463+Math.random()*4-2, 1);
                 await sleep(1500);
-                await mouse(258, 455, 1);
+                await mouse(258+Math.random()*10-5, 455+Math.random()*4-2, 1);
                 await sleep(1500);
-                await mouse(210, 464, 1);
+                await mouse(210+Math.random()*10-5, 464+Math.random()*4-2, 1);
                 await sleep(5000);
             }
         }
@@ -2827,6 +2799,49 @@ async function mindRunecrafter() {
     }
 }
 
+var barb_village_escape_route = [ [ 3078, 3434 ], [ 3078, 3427 ], [ 3078, 3420 ], [ 3082, 3414 ], [ 3085, 3421 ], [ 3092, 3420 ], [ 3099, 3420 ], [ 3106, 3420 ], [ 3113, 3420 ], [ 3119, 3424 ] ]
+
+async function escapeBarbVillage(npc = null) {
+    if (npc !== null) log('Escaping from',npcName(npc));
+    await runOn();
+    var tries = 0;
+    while (!STOP && (npc === null || (npcName(npc) !== null && npcName(npc).length > 0))) {
+        var [x, z] = myPos();
+        if (x > 3115) {
+            await sleep(5000);
+            break;
+        }
+        if (await clickAlong([x,z], barb_village_escape_route, true)) {
+            await sleep(5000);
+            break;
+        }
+        await sleep(1000);
+        tries = tries + 1;
+        if (tries > 30) {
+            log('May have gotten stuck...');
+            break;
+        }
+    }
+    log('Seems to be safe');
+    while (!STOP) {
+        var [x, z] = myPos();
+        if (dist([x,z], [3083, 3419]) < 5) {
+            await sleep(1000);
+            break;
+        }
+        if (await clickAlong([x,z], barb_village_escape_route.slice(3,-1), false)) {
+            await sleep(1000);
+            break;
+        }
+        await sleep(1000);
+        tries = tries + 1;
+        if (tries > 30) {
+            log('May have gotten stuck...');
+            break;
+        }
+    }
+    return true;
+}
 
 var STOP = false;
 var WATCHDOG = now();
@@ -2834,14 +2849,29 @@ var WATCHDOG = now();
 async function mainLoop() {
     WATCHDOG = now();
     log('Starting');
-    await login()
+    await login();
+    
+    var blacklist = { };
+    
     while (!STOP) {
         //await walkPath(varrock_west_to_falador_west,true);
         //await miningGuildMiner();
+        //await faladorWestSmelter();
         //await simpleBuy([287,92]); //Mind Runes
         //await walkPath(falador_east_bank_deathwalk,true);
-        //await cowKiller();
-        await wizardKiller();
+        //await omniKiller(/Cow/i);
+        //await escapeBarbVillage();
+        
+        await omniKiller(/Barbarian/i, ([m,id]) => { 
+            var gpos = localToGlobal(entityToLocal(m)); 
+            return gpos[1] < 3435 &&
+                   !(gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445) &&
+                   !(gpos[0] >= 2080 && gpos[0] <= 3085 && gpos[1] >= 3427 && gpos[1] <= 3432) &&
+                   !(gpos[0] >= 3073 && gpos[0] <= 3079 && gpos[1] >= 3410 && gpos[1] <= 3415);
+        }, blacklist, escapeBarbVillage);
+        
+        //await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = localToGlobal(entityToLocal(m)); return gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445; });
+        //await omniKiller(/Wizard/i, ([m,id]) => npcLevel(m) == 7);
         //await faladorWestSmelter();
         //await auburyEssenceMiner();
         //await walkPath(varrock_east_to_varrock_west.concat(varrock_west_to_falador_west.concat(falador_west_to_falador_east)),true);
