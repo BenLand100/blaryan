@@ -453,9 +453,9 @@ function localToGlobal(x, z = null) {
 }
 
 function entityToGlobal(entity) {
-    var pos = entityPos(entity);
-    if (pos === null) return pos;
-    return localToGlobal(Math.floor(pos[0] / 128), Math.floor(pos[1] / 128));
+    var loc = entityToLocal(entity);
+    if (loc === null) return loc;
+    return localToGlobal(loc);
 }
 
 function globalToLocal(X, Z = null) {
@@ -499,7 +499,7 @@ function _index(x, z) {
     return x*104+z;
 }
 
-function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = true) { //all local coords
+function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = false) { //all local coords
     var map = collisionMap(),
         bfsDirection = Array.from(Array(104*104)),
         bfsCost = Array.from(Array(104*104));
@@ -606,10 +606,12 @@ function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = true) { //all loc
     return found;
 }
 
-function canWalkTo(x,z) {
+function canWalkTo(gpos,nearby=false) {
     var a = globalToLocal(myPos()),
-        b = globalToLocal(x,z);
-    return _canWalkTo(a[0],a[1],b[0],b[1]);
+        b = globalToLocal(gpos);
+    var found = _canWalkTo(a[0],a[1],b[0],b[1],nearby);
+    log('canWalkTo', a, b, found);
+    return found;
 }
 
 function findNPCs(pattern, visible=true, nearby=null, ids_too = false) {
@@ -2336,14 +2338,14 @@ async function omniKiller(what=/Cow/i,extra_filter=null,escapeFn=null,pickup=PIC
         }
     }
     
-    var after_me = findNPCs(what,false,50,true).filter( ([m,id]) => afterMe(m) && canReach(entityToGlobal(m), false) ),
+    var after_me = findNPCs(what,false,50,true).filter( ([m,id]) => afterMe(m) && canWalkTo(entityToGlobal(m), false) ),
         mobs = [];
     if (extra_filter !== null) after_me = after_me.filter(extra_filter);
     if (after_me.length == 0) {
-        mobs = findNPCs(what,true,null,true).filter( ([m,id]) => { return entityTargetID(m) == -1 && canReach(entityToGlobal(m), false); } );
+        mobs = findNPCs(what,true,null,true).filter( ([m,id]) => { return entityTargetID(m) == -1 && canWalkTo(entityToGlobal(m), false); } );
         if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         if (mobs.length < 1) {
-            mobs = findNPCs(what,false,null,true).filter( ([m,id]) => entityTargetID(m) == -1 && canReach(entityToGlobal(m), false) );
+            mobs = findNPCs(what,false,null,true).filter( ([m,id]) => entityTargetID(m) == -1 && canWalkTo(entityToGlobal(m), false) );
             if (extra_filter !== null) mobs = mobs.filter(extra_filter);
         }
         if (mobs.length < 1) {
