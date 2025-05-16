@@ -114,7 +114,7 @@ function baseZ() {
 }
 
 function myPos() {
-    return localToGlobal(entityToLocal(player()))
+    return entityToGlobal(player())
 }
 
 function myAnim() {
@@ -452,6 +452,12 @@ function localToGlobal(x, z = null) {
     return [x + baseX(), z + baseZ()];
 }
 
+function entityToGlobal(entity) {
+    var pos = entityPos(entity);
+    if (pos === null) return pos;
+    return localToGlobal(Math.floor(pos[0] / 128), Math.floor(pos[1] / 128));
+}
+
 function globalToLocal(X, Z = null) {
     if (Z == null) {
         Z = X[1];
@@ -487,6 +493,123 @@ function e2tDist(a, i, j = null) {
         i = i[0];
     }
     return Math.sqrt(Math.pow(entityX(a) - i*128 - 64, 2.0) + Math.pow(entityZ(a) - j*128 - 64, 2.0)) / 128;
+}
+
+function _index(x, z) {
+    return x*104+z;
+}
+
+function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = true) { //all local coords
+    var map = collisionMap(),
+        bfsDirection = Array.from(Array(104*104)),
+        bfsCost = Array.from(Array(104*104));
+    if (!map) return false;
+    for (let i = 0; i < 104; i++)
+        for (let j = 0; j < 104; j++) {
+            let k = _index(i, j);
+            bfsDirection[k] = 0;
+            bfsCost[k] = 99999999
+        }
+    var x_cur = x_start,
+        z_cur = z_start,
+        idx = _index(x_start, z_start);
+    bfsDirection[idx] = 99;
+    bfsCost[idx] = 0;
+    let head = 0,
+        tail = 0;
+    var bfsPoints = Array.from(Array(4000));
+    bfsPoints[head++] = [x_start, z_start];
+    let found = false,
+        max_p = bfsPoints.length;
+    while (tail !== head) {
+        [x_cur, z_cur] = bfsPoints[tail];
+        tail = (tail + 1) % max_p
+        if (x_cur === x_dest && z_cur === z_dest) {
+            found = true;
+            break;
+        }
+        var cost = bfsCost[_index(x_cur, z_cur)] + 1;
+        idx = _index(x_cur - 1, z_cur);
+        if (x_cur > 0 && bfsDirection[idx] === 0 && (map[idx] & 2621704) === 0) {
+            bfsPoints[head] = [x_cur - 1, z_cur];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 2;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur + 1, z_cur);
+        if (x_cur < 104 - 1 && bfsDirection[idx] === 0 && (map[idx] & 2621824) === 0) {
+            bfsPoints[head] = [x_cur + 1, z_cur];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 8;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur, z_cur - 1)
+        if (z_cur > 0 && bfsDirection[idx] === 0 && (map[idx] & 2621698) === 0) {
+            bfsPoints[head] = [x_cur, z_cur - 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 1;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur, z_cur + 1)
+        if (z_cur < 104 - 1 && bfsDirection[idx] === 0 && (map[idx] & 2621728) === 0) {
+            bfsPoints[head] = [x_cur, z_cur + 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 4;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur - 1, z_cur - 1)
+        if (x_cur > 0 && z_cur > 0 && bfsDirection[idx] === 0 && (map[idx] & 2621710) === 0 && (map[_index(x_cur - 1, z_cur)] & 2621704) === 0 && (map[_index(x_cur, z_cur - 1)] & 2621698) === 0) {
+            bfsPoints[head] = [x_cur - 1, z_cur - 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 3;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur + 1, z_cur - 1)
+        if (x_cur < 104 - 1 && z_cur > 0 && bfsDirection[idx] === 0 && (map[idx] & 2621827) === 0 && (map[_index(x_cur + 1, z_cur)] & 2621824) === 0 && (map[_index(x_cur, z_cur - 1)] & 2621698) === 0) {
+            bfsPoints[head] = [x_cur + 1, z_cur - 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 9;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur - 1, z_cur + 1)
+        if (x_cur > 0 && z_cur < 104 - 1 && bfsDirection[idx] === 0 && (map[idx] & 2621752) === 0 && (map[_index(x_cur - 1, z_cur)] & 2621704) === 0 && (map[_index(x_cur, z_cur + 1)] & 2621728) === 0) {
+            bfsPoints[head] = [x_cur - 1, z_cur + 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 6;
+            bfsCost[idx] = cost;
+        }
+        idx = _index(x_cur + 1, z_cur + 1)
+        if (x_cur < 104 - 1 && z_cur < 104 - 1 && bfsDirection[idx] === 0 && (map[idx] & 2621920) === 0 && (map[_index(x_cur + 1, z_cur)] & 2621824) === 0 && (map[_index(x_cur, z_cur + 1)] & 2621728) === 0) {
+            bfsPoints[head] = [x_cur + 1, z_cur + 1];
+            head = (head + 1) % max_p;
+            bfsDirection[idx] = 12;
+            bfsCost[idx] = cost
+        }
+    }
+    if (nearby && !found) {
+        var best = 100;
+        for (let d = 1; d < 2; d++) {
+            for (let M = x_dest - d; M <= x_dest + d; M++) {
+                for (let S = z_dest - d; S <= z_dest + d; S++) {
+                    idx = _index(M, S);
+                    if (M >= 0 && S >= 0 && M < 104 && S < 104 && bfsCost[idx] < best) {
+                        best = bfsCost[idx];
+                        x_cur = M; 
+                        z_cur = S;
+                        found = true;
+                    }
+                }
+            }
+            if (found) break;
+        }
+    }
+    return found;
+}
+
+function canWalkTo(x,z) {
+    var a = globalToLocal(myPos()),
+        b = globalToLocal(x,z);
+    return _canWalkTo(a[0],a[1],b[0],b[1]);
 }
 
 function findNPCs(pattern, visible=true, nearby=null, ids_too = false) {
@@ -1052,7 +1175,7 @@ async function handleRandoms(escapeRoute=randomEscape, killWeakDanger=false) {
             if (afterMe(npc) || npcName(npc).match(/Strange.*Plant/i)) {
                 log('Solving', npcName(npc));
                 if (!await clickEntity(npc, height=0.5)) {
-                    await clickMM(localToGlobal(entityToLocal(npc)));
+                    await clickMM(entityToGlobal(npc));
                     await waitForFlag();
                     await clickEntity(npc, height=0.5);
                 }
@@ -2240,7 +2363,7 @@ async function omniKiller(what=/Cow/i,extra_filter=null,npc_fail_tracker=null,es
     }
     
     if (!await clickEntity(target,1.0)) {
-        await walkTowards(localToGlobal(entityToLocal(target)));
+        await walkTowards(entityToGlobal(target));
         await waitForFlag();
         return;
     }
@@ -2862,14 +2985,14 @@ async function mainLoop() {
         //await escapeBarbVillage();
         
         await omniKiller(/Barbarian/i, ([m,id]) => { 
-            var gpos = localToGlobal(entityToLocal(m)); 
+            var gpos = entityToGlobal(m); 
             return gpos[1] < 3435 && gpos[0] < 3094 &&
                    !(gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445) &&
                    !(gpos[0] >= 2080 && gpos[0] <= 3085 && gpos[1] >= 3427 && gpos[1] <= 3432) &&
                    !(gpos[0] >= 3073 && gpos[0] <= 3079 && gpos[1] >= 3410 && gpos[1] <= 3415);
         }, null, escapeBarbVillage);
         
-        //await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = localToGlobal(entityToLocal(m)); return gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445; });
+        //await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = entityToGlobal(m); return gpos[0] >= 3075 && gpos[0] <= 3082 && gpos[1] >= 3436 && gpos[1] <= 3445; });
         //await omniKiller(/Wizard/i, ([m,id]) => npcLevel(m) == 7);
         //await faladorWestSmelter();
         //await auburyEssenceMiner();
