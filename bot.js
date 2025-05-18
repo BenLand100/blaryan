@@ -348,6 +348,17 @@ function findOption(pattern) {
 }
 
 /************************
+MEssages
+************************/
+function message(i) { 
+    return [ 
+        document.client['fJ'][i], //type
+        document.client['fS'][i], //sender
+        document.client['fV'] [i] //text
+    ];
+}
+
+/************************
 HELPERS
 ************************/
 
@@ -499,7 +510,7 @@ function _index(x, z) {
     return x*104+z;
 }
 
-function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = false) { //all local coords
+function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false) { //all local coords
     var map = collisionMap(),
         bfsDirection = Array.from(Array(104*104)),
         bfsCost = Array.from(Array(104*104));
@@ -589,13 +600,13 @@ function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = false) { //all lo
     if (nearby && !found) {
         var best = 100;
         for (let d = 1; d < 2; d++) {
-            for (let M = x_dest - d; M <= x_dest + d; M++) {
-                for (let S = z_dest - d; S <= z_dest + d; S++) {
-                    idx = _index(M, S);
-                    if (M >= 0 && S >= 0 && M < 104 && S < 104 && bfsCost[idx] < best) {
+            for (let i = x_dest - d; i <= x_dest + d; i++) {
+                for (let j = z_dest - d; j <= z_dest + d; j++) {
+                    idx = _index(i, j);
+                    if (i >= 0 && j >= 0 && i < 104 && j < 104 && bfsCost[idx] < best) {
                         best = bfsCost[idx];
-                        x_cur = M; 
-                        z_cur = S;
+                        x_cur = i; 
+                        z_cur = j;
                         found = true;
                     }
                 }
@@ -603,15 +614,26 @@ function _canWalkTo(x_start, z_start, x_dest, z_dest, nearby = false) { //all lo
             if (found) break;
         }
     }
-    return found;
+    if (found) {
+        return bfsCost[_index(x_cur,z_cur)];
+    } else {
+        return null
+    }
 }
 
-function canWalkTo(gpos,nearby=false) {
+function canWalkTo(gpos, nearby=false) {
     var a = globalToLocal(myPos()),
         b = globalToLocal(gpos);
-    var found = _canWalkTo(a[0],a[1],b[0],b[1],nearby);
-    log('canWalkTo', a, b, found);
-    return found;
+    var dist = _walkDistance(a[0],a[1],b[0],b[1],nearby);
+    return dist !== null;
+}
+
+function distanceTo(gpos, nearby=false) {
+    var a = globalToLocal(myPos()),
+        b = globalToLocal(gpos);
+    //log(a,b);
+    var dist = _walkDistance(a[0],a[1],b[0],b[1],nearby);
+    return dist === null ? 999999 : dist;
 }
 
 function findNPCs(pattern, visible=true, nearby=null, ids_too = false) {
@@ -756,14 +778,22 @@ function dist(a, b) {
 function nthClosest(ref_pos, possible_pos, n) {
     var arr = [...possible_pos];
     shuffle(arr);
-    const sortedArr = arr.sort((a, b) => dist(ref_pos, a) - dist(ref_pos, b));
-    return sortedArr[n - 1];
+    arr.sort((a, b) => dist(ref_pos, a) - dist(ref_pos, b));
+    return arr[n - 1];
 }
 
 function chooseClosest(ref_pos, possible_pos, nrand=1.1) {
     if (possible_pos.length == 0) return null;
     var nth = Math.min(Math.floor(1.0 + Math.random()*nrand), possible_pos.length);
     return nthClosest(ref_pos, possible_pos, nth);
+}
+
+function chooseClosestPath(local_coords, nearby=true) {
+    var arr = [...local_coords],
+        dists = arr.map(p => distanceTo(localToGlobal(p), nearby)),
+        idx = Array.from({ length: dists.length }, (_, index) => index);
+    idx.sort((a, b) => dists[a] - dists[b]);
+    return arr[idx[0]];
 }
 
 function chooseRandom(choices, n = 1) {
@@ -791,22 +821,22 @@ MOUSE_RIGHT = 2
 async function mouse(x, y, button = 0, delay=100) {
   const rect = canvas.getBoundingClientRect();
   canvas.dispatchEvent(new MouseEvent('mousemove', {
-    'clientX': x + rect.left,
-    'clientY': y + rect.top
+    'clientX': Math.round(x) + rect.left,
+    'clientY': Math.round(y) + rect.top
   }));
   await sleep(delay);
   if (button > 0) {
     canvas.dispatchEvent(new MouseEvent('mousedown', {
-      'clientX': x + rect.left,
-      'clientY': y + rect.top,
+      'clientX': Math.round(x) + rect.left,
+      'clientY': Math.round(y) + rect.top,
       'button': button == 2 ? 2 : 0,
       'buttons': button == 2 ? 2 : 1,
       'which': button == 2 ? 3 : 1
     }));
     await sleep(delay);
     canvas.dispatchEvent(new MouseEvent('mouseup', {
-      'clientX': x + rect.left,
-      'clientY': y + rect.top,
+      'clientX': Math.round(x) + rect.left,
+      'clientY': Math.round(y) + rect.top,
       'button': button == 2 ? 2 : 0,
       'buttons': 0,
       'which': button == 2 ? 3 : 1
@@ -958,7 +988,7 @@ async function login(username=null, password=null) {
         await mouse(457+Math.random()*10-5, 97+Math.random()*4-2, 1);
         await sleep(500);
         await holdKey('ArrowUp')
-        await sleep(4000);
+        await sleep(2000);
         await releaseKey('ArrowUp')
         await sleep(500);
         return true
@@ -1842,7 +1872,10 @@ async function miningGuildMiner() {
                     await depositAll(new Set(PICKAXES));
                     await clickMM(myPos());
                     await sleep(1000);
-                    if (Math.random() < 0.2) await runOn();
+                    if (Math.random() < 0.5) {
+                        await runOn();
+                        await sleep(750);
+                    }
                     await openTab(TAB_INVENTORY);
                 }
                 return;
@@ -1876,7 +1909,8 @@ async function miningGuildMiner() {
         await sleep(1500);
         return;
     }
-    var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+    //var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+    var mine = chooseClosestPath(objs);
     //log('mining',mine);
     if (mine !== null) {
 
@@ -2204,10 +2238,10 @@ async function varrockEastMiner() {
                     if (Math.random() < 0.2) await runOn();
                     await openTab(TAB_INVENTORY);
                 }
-                return;
+                return true;
             }
         } else {
-            return;
+            return false;
         }
     }
     //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
@@ -2218,14 +2252,14 @@ async function varrockEastMiner() {
     var objs = findObjects(toFind);
     if (objs.length == 0) {
         toFind = tin > copper ? [2090, 2091] : [2094, 2095]; // copper or tin backup
-        log('No iron');
+        //log('No iron');
         objs = findObjects(toFind)
     }
     if (objs.length == 0) {
         await clickMM(varrock_east_bank_mine_path[varrock_east_bank_mine_path.length-1])
-        return;
+        return false;
     }
-    var mine = chooseClosest(globalToLocal([x,z]), objs, nrand=1.1);
+    var mine = chooseClosestPath(objs);
 
     if (mine !== null) {
         var [gx,gz] = localToGlobal(mine);
@@ -2238,7 +2272,7 @@ async function varrockEastMiner() {
         WATCHDOG = now();
         await openTab(TAB_INVENTORY);
 
-        console.log('Mining');
+        //log('Mining');
         for (var i = 0; i < 60; i++) {
             if (myAnim() != mining_anim) break;
             if (isObjectAt(gx,gz,SMOKING_ROCKS)) {
@@ -2252,10 +2286,12 @@ async function varrockEastMiner() {
             }
             if (!isObjectAt(gx,gz,toFind)) break;
             await handleRandoms();
+        await handleLostHead();
             //log('...');
             await sleep(250);
         }
     }
+    return false;
 }
 
 async function buryBones() {
@@ -2564,7 +2600,7 @@ async function auburyEssenceMiner() {
                 await sleep(5000);
             }
         }
-        return;
+        return false;
     } else if (auburyDist < 100) {
         // in varrock
         if (await clickAlong([x,z], aubury_to_varrock_east, tobank)) {
@@ -2586,6 +2622,7 @@ async function auburyEssenceMiner() {
                         await openTab(TAB_INVENTORY);
                     }
                 }
+                return true;
             }
         } else if (auburyDist < 10) {
             if (!isWallAt(3253, 3399, 1531)) {
@@ -2597,7 +2634,7 @@ async function auburyEssenceMiner() {
                 await sleep(750);
             }
         }
-        return;
+        return false;
     } else {
         // in essence mine
         if (tobank) {
@@ -2620,7 +2657,7 @@ async function auburyEssenceMiner() {
                 gmine = localToGlobal(mine);
                 
             if (!await clickMS(mine, null, 2.0, 2)) {
-                log('Walking to essence', gmine);
+                //log('Walking to essence', gmine);
                 await walkTowards(gmine[0]+10*Math.random()-5, gmine[1]+10*Math.random()-5);
                 await sleep(1500);
             } else {
@@ -2628,7 +2665,7 @@ async function auburyEssenceMiner() {
                 if (await clickOption(/Mine.*Rune.*Essence/)) {
                     await waitForFlag();
                     await waitForAnim(5);
-                    if (myAnim() != mining_anim) return;
+                    if (myAnim() != mining_anim) return false;
                     WATCHDOG = now();
                     for (var _ = 0; _ < 120 && myAnim() == mining_anim && freeSlots() > 0; _++) {
                         await handleRandoms();
@@ -2643,7 +2680,7 @@ async function auburyEssenceMiner() {
                 }
             }
         }
-        return;
+        return false;
     }
 }
 
@@ -2963,6 +3000,101 @@ async function escapeBarbVillage(npc = null) {
     return true;
 }
 
+async function clickOrWalkTo(gpos, height, delay=500) {
+    if (await clickMS(globalToLocal(gpos), null, height)) {
+        await waitForFlag();
+        await sleep(delay);
+        return true;
+    } else {
+        await walkTowards(gpos);
+        await sleep(500);
+        return false;
+    }
+}
+
+async function gnomeAgility() {
+    
+    await handleLogout();
+    await handleRandoms();
+    
+    var [x,z] = myPos();
+    
+    const ground_states = [
+        [[2474, 3436], 'BEGIN'],
+        [[2474, 3427], 'LOG_NET'],
+        //'NET_BRANCH' // level 1
+        //'BRANCH_ROPE' // level 2
+        //'ROPE_BRANCH' // level 2
+        [[2487, 3423], 'BRANCH_NET'],
+        [[2486, 3428], 'NET_PIPE'],
+        [[2484, 3437], 'END']
+    ];
+    
+    if (currentLevel() == 0) {
+        var pos = [x,z],
+            dists = ground_states.map(([ckp,state]) => dist(pos,ckp)),
+            idx = Array.from({ length: dists.length }, (_, index) => index);
+        idx.sort((a,b) => dists[a] - dists[b])
+        var state = ground_states[idx[0]][1];
+        //log(state);
+        if (state == 'BEGIN' || state == 'END') {
+            if (Math.random() < 0.2) {
+                await runOn();
+                await openTab(TAB_STATS);
+            }
+            await clickOrWalkTo([2474, 3435], 0.0, 5000); //log 
+        } else if (state == 'LOG_NET') {
+            var xr = Math.random()*2-1;
+            await clickOrWalkTo([2473+xr, 3425], 1.75, 3000) // net-one (-2,+2 in x ?,1000);
+        } else if (state == 'BRANCH_NET') {
+            var xr = Math.random()*2-1;
+            await clickMM(2486+xr, 3423, 1, 1) // net-two (-3+2 in x)
+            await waitForFlag();
+            await sleep(500);
+            await clickOrWalkTo([2486+xr, 3426], 0.75, 3000) // net-two (-3+2 in x,1000);
+        } else if (state == 'NET_PIPE') {
+            if (await clickOrWalkTo([2487, 3431], 1.1, 9000)) { // pipe
+                WATCHDOG = now();
+            }
+        } else {
+            throw new Error('Unknown state ' + state);
+        } 
+    } else if (currentLevel() == 1) { // platform after net
+        //log('NET_BRANCH');
+        await clickOrWalkTo([2473, 3421.8], 1.2, 3000); // up-branch
+    } else if (currentLevel() == 2) {
+        if (x < 2480) { // platform after branch
+            //log('BRANCH_ROPE');
+            await clickOrWalkTo([2478+Math.random()-0.5, 3420], -0.05, 5000); // rope
+        } else { // platform after rope
+            //log('ROPE_BRANCH');
+            await clickOrWalkTo([2486, 3419], 0.4, 2500); // down-branch
+        }
+    }
+    
+}
+
+async function ironAndEssence(storage) {
+    if (! ('current_job' in storage)) {
+        storage['current_job'] = Math.random() > 0.5 ? 'ESSENCE' : 'IRON';
+        storage['last_change'] = now();
+        log('Starting job...', storage['current_job']);
+        await sleep(1000);
+    }
+    var res = false;
+    if (storage['current_job'] == 'IRON') {
+        res = await varrockEastMiner();
+    } else if (storage['current_job'] == 'ESSENCE') {
+        res = await auburyEssenceMiner();
+    }
+    if (res) {
+        storage['current_job'] = Math.random() > 0.4 ? 'ESSENCE' : 'IRON';
+        storage['last_change'] = now();
+        log(storage['current_job']);
+    }
+    await sleep(500)
+}
+
 var STOP = false;
 var WATCHDOG = now();
 
@@ -2971,7 +3103,7 @@ async function mainLoop() {
     log('Starting');
     await login();
     
-    var blacklist = { };
+    var storage = { };
     
     while (!STOP) {
         //await walkPath(varrock_west_to_falador_west,true);
@@ -2981,7 +3113,7 @@ async function mainLoop() {
         //await walkPath(falador_east_bank_deathwalk,true);
         //await omniKiller(/Cow/i);
         //await escapeBarbVillage();
-        await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = entityToGlobal(m); return gpos[1] < 3435 && gpos[0] < 3094; }, escapeBarbVillage);
+        //await omniKiller(/Barbarian/i, ([m,id]) => { var gpos = entityToGlobal(m); return gpos[1] < 3435 && gpos[0] < 3094; }, escapeBarbVillage);
         /*
         await omniKiller(/Barbarian/i, ([m,id]) => { 
             var gpos = entityToGlobal(m); 
@@ -2998,6 +3130,8 @@ async function mainLoop() {
         //await walkPath(varrock_east_to_varrock_west.concat(varrock_west_to_falador_west.concat(falador_west_to_falador_east)),true);
         //await airRunecrafter();
         //await mindRunecrafter();
+        //await gnomeAgility();
+        await ironAndEssence(storage);
     }
 }
 
