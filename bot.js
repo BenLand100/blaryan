@@ -624,7 +624,7 @@ function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false) { //all
 function canWalkTo(gpos, nearby=false) {
     var a = globalToLocal(myPos()),
         b = globalToLocal(gpos);
-    var dist = _walkDistance(a[0],a[1],b[0],b[1],nearby);
+    var dist = _walkDistance(Math.floor(a[0]),Math.floor(a[1]),Math.floor(b[0]),Math.floor(b[1]),nearby);
     return dist !== null;
 }
 
@@ -1148,18 +1148,27 @@ function timediff(a,b) {
     return Math.abs(a.getTime() - b.getTime())/1000;
 }
 
-async function randomEscape(npc) {
-    var pos = myPos(),
-        alpha = 2*3.14195*Math.random(),
-        sin_alpha = Math.sin(alpha),
-        cos_alpha = Math.cos(alpha),
-        seg_dist = 8;
-    var safe_route = [
-        [pos[0] + sin_alpha*seg_dist*0, pos[1] + cos_alpha*seg_dist*0],
-        [pos[0] + sin_alpha*seg_dist*1, pos[1] + cos_alpha*seg_dist*1],
-        [pos[0] + sin_alpha*seg_dist*2, pos[1] + cos_alpha*seg_dist*2]
-    ];
-    log('Running from', npcName(npc), safe_route);
+async function randomEscape(npc = null, seg_dist = 8, seg_num = 3) {
+    log('Random escape from', npc !== null ? npcName(npc) : 'nothing');
+    var pos = myPos(), safe_route;
+    for (var i = 0; i < 100; i++) {
+        var alpha = 2*3.14195*Math.random(),
+            sin_alpha = Math.sin(alpha),
+            cos_alpha = Math.cos(alpha);
+        safe_route = [pos];
+        for (var j = 0; j < seg_num; j++) {
+            var npos = [pos[0] + sin_alpha*seg_dist*j, pos[1] + cos_alpha*seg_dist*j];
+            //log(i,j,npos);
+            if (!canWalkTo(npos, true)) break; // can't walk here!
+            safe_route.push(npos)
+        }
+        if (safe_route.length == seg_num+1) break; // good route!
+    }
+    if (safe_route.length != seg_num+1) { // bad route!
+        log('No path found! Try again...');
+        return;
+    }
+    log('Found an escape route', safe_route);
     for (var i = 0; i < 8 && !await clickAlong(myPos(), safe_route, true); i++) await sleep(750);
     await sleep(5000);
     log('Returning');
@@ -1258,7 +1267,7 @@ async function handleLostHead() {
             await sleep(1000);
             var pickaxe = invFind(PICKAXES);
             await clickInv(pickaxe); //equip it
-            await sleep(500);
+            await sleep(2000);
         }
     }
 }
@@ -1841,7 +1850,7 @@ async function miningGuildMiner() {
     await handleRandoms(z > 5000 ? escapeMine : randomEscape);
     
     var ipick = invFind(PICKAXES);
-    if (ipick !== null && !(new Set(PICKAXES).has(heldItem()))) {
+    if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
         throw new Error('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
@@ -2079,7 +2088,7 @@ async function lumbySwampMiner() {
     await handleRandoms();
     
     var ipick = invFind(PICKAXES);
-    if (ipick !== null && !(new Set(PICKAXES).has(heldItem()))) {
+    if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
         throw new Error('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
@@ -2205,7 +2214,7 @@ async function varrockEastMiner() {
     await handleRandoms();
     
     var ipick = invFind(PICKAXES);
-    if (ipick !== null && !(new Set(PICKAXES).has(heldItem()))) {
+    if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
         throw new Error('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
@@ -2559,7 +2568,7 @@ async function auburyEssenceMiner() {
     await handleLostHead();
     
     var ipick = invFind(PICKAXES);
-    if (ipick !== null && !(new Set(PICKAXES).has(heldItem()))) {
+    if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
         throw new Error('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
