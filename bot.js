@@ -510,7 +510,7 @@ function _index(x, z) {
     return x*104+z;
 }
 
-function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false) { //all local coords
+function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false, locmode = false) { //all local coords
     var map = collisionMap(),
         bfsDirection = Array.from(Array(104*104)),
         bfsCost = Array.from(Array(104*104));
@@ -611,7 +611,23 @@ function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false) { //all
                     }
                 }
             }
-            if (found) break;
+            if (found) break;W
+        }
+    }
+    if (locmode && !found) {
+        var best = 100;
+        for (let i = x_dest - 1; i <= x_dest + 1; i++) {
+            for (let j = z_dest - 1; j <= z_dest + 1; j++) {
+                if ((i != x_dest) ^ (j != z_dest)) {
+                    idx = _index(i, j);
+                    if (i >= 0 && j >= 0 && i < 104 && j < 104 && bfsCost[idx] < best) {
+                        best = bfsCost[idx];
+                        x_cur = i; 
+                        z_cur = j;
+                        found = true;
+                    }
+                }
+            }
         }
     }
     if (found) {
@@ -621,18 +637,18 @@ function _walkDistance(x_start, z_start, x_dest, z_dest, nearby = false) { //all
     }
 }
 
-function canWalkTo(gpos, nearby=false) {
+function canWalkTo(gpos, nearby=false, locmode=false) {
     var a = globalToLocal(myPos()),
         b = globalToLocal(gpos);
-    var dist = _walkDistance(Math.floor(a[0]),Math.floor(a[1]),Math.floor(b[0]),Math.floor(b[1]),nearby);
+    var dist = _walkDistance(Math.floor(a[0]),Math.floor(a[1]),Math.floor(b[0]),Math.floor(b[1]),nearby,locmode);
     return dist !== null;
 }
 
-function distanceTo(gpos, nearby=false) {
+function distanceTo(gpos, nearby=false, locmode=false) {
     var a = globalToLocal(myPos()),
         b = globalToLocal(gpos);
     //log(a,b);
-    var dist = _walkDistance(a[0],a[1],b[0],b[1],nearby);
+    var dist = _walkDistance(a[0],a[1],b[0],b[1],nearby,locmode);
     return dist === null ? 999999 : dist;
 }
 
@@ -788,9 +804,9 @@ function chooseClosest(ref_pos, possible_pos, nrand=1.1) {
     return nthClosest(ref_pos, possible_pos, nth);
 }
 
-function chooseClosestPath(local_coords, nearby=true) {
+function chooseClosestPath(local_coords, nearby=false, locmode=true) {
     var arr = [...local_coords],
-        dists = arr.map(p => distanceTo(localToGlobal(p), nearby)),
+        dists = arr.map(p => distanceTo(localToGlobal(p), nearby, locmode)),
         idx = Array.from({ length: dists.length }, (_, index) => index);
     idx.sort((a, b) => dists[a] - dists[b]);
     return arr[idx[0]];
@@ -1848,10 +1864,11 @@ async function miningGuildMiner() {
     var [x, z] = myPos();
     await handleLogout();
     await handleRandoms(z > 5000 ? escapeMine : randomEscape);
+    await handleLostHead();
     
     var ipick = invFind(PICKAXES);
     if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
-        throw new Error('No pickaxe!');
+        log('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
         mining_anim = PICKAXE_ANIMS[pickaxe_id];
@@ -1901,8 +1918,6 @@ async function miningGuildMiner() {
             return;
         }
     }
-
-    await handleLostHead();
 
     var toFind = Math.floor(coal/6) > mith ? [2102, 2103] : [2096, 2097]; //mith:coal
     var objs = findObjects(toFind,false,null,35);
@@ -2086,10 +2101,11 @@ var draynor_bank_booths = [
 async function lumbySwampMiner() {
     await handleLogout();
     await handleRandoms();
+    await handleLostHead();
     
     var ipick = invFind(PICKAXES);
     if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
-        throw new Error('No pickaxe!');
+        log('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
         mining_anim = PICKAXE_ANIMS[pickaxe_id];
@@ -2128,8 +2144,6 @@ async function lumbySwampMiner() {
         }
     }
     //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
-
-    await handleLostHead();
 
     var toFind = [2102, 2103]; //mith
     var objs = findObjects(toFind,false,null,35);
@@ -2212,10 +2226,11 @@ var varrock_east_bank_booths = [
 async function varrockEastMiner() {
     await handleLogout();
     await handleRandoms();
+    await handleLostHead();
     
     var ipick = invFind(PICKAXES);
     if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
-        throw new Error('No pickaxe!');
+        log('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
         mining_anim = PICKAXE_ANIMS[pickaxe_id];
@@ -2254,8 +2269,6 @@ async function varrockEastMiner() {
         }
     }
     //console.log('Iron', iron,  'Copper', copper, 'Tin', tin, 'Free', free);
-
-    await handleLostHead();
 
     var toFind = [2092, 2093]; //iron
     var objs = findObjects(toFind);
@@ -2569,7 +2582,7 @@ async function auburyEssenceMiner() {
     
     var ipick = invFind(PICKAXES);
     if (ipick === null && !(new Set(PICKAXES).has(heldItem()))) {
-        throw new Error('No pickaxe!');
+        log('No pickaxe!');
     }
     var pickaxe_id = ipick !== null ? invItem(ipick) : heldItem(),
         mining_anim = PICKAXE_ANIMS[pickaxe_id];
@@ -3104,6 +3117,170 @@ async function ironAndEssence(storage) {
     await sleep(500)
 }
 
+var seers_spin_to_seers_bank = [
+        [2714, 3471],
+        [2721, 3472],
+        [2725, 3478],
+        [2727, 3485],
+        [2726, 3492]
+    ],
+    seers_bank_to_seers_flax = [
+        [2726, 3492],
+        [2726, 3485],
+        [2726, 3478],
+        [2727, 3471],
+        [2727, 3464],
+        [2726, 3457],
+        [2729, 3450],
+        [2734, 3445],
+        [2741, 3443]
+    ],
+    seers_flax_to_seers_spin = [
+        [2741, 3443],
+        [2734, 3443],
+        [2730, 3450],
+        [2725, 3455],
+        [2722, 3462],
+        [2719, 3469],
+        [2717, 3472]
+    ],
+    seers_bank_booths = [
+        [2722, 3494],
+        [2724, 3494],
+        [2727, 3494],
+        [2728, 3494],
+        [2729, 3494]
+    ];
+
+async function flaxToString() {
+
+    var [x, z] = myPos();
+    await handleLogout();
+    await handleRandoms();
+    
+    var flax = countItem(1780),
+        string = countItem(1778),
+        free = freeSlots(),
+        [x, z] = myPos();
+    
+    var phase = (free == 0 || currentLevel() == 1) ? (flax > 0 ? 'FLAX_TO_SPIN' : 'SPIN_TO_BANK') : 'BANK_TO_FLAX'
+    log(phase);
+    
+    if (phase == 'SPIN_TO_BANK') {
+        if (currentLevel() == 1) {
+            await clickMS(globalToLocal([2715, 3470]), null, 0.0); //climb
+            await waitForFlag();
+            await sleep(2000);
+        } else {
+            if (x <= 2715 && z <= 3473 && x >= 2710 && z >= 3470) { //in house
+                //[2716, 3472] 1530 //closed
+                //[2715, 3472] 1531 //opened
+                if (isWallAt(2716, 3472, 1530)) {        
+                    await clickMS(globalToLocal(2715.5,3472),null,1.0,2);
+                    await sleep(500);
+                    if (await clickOption(/Open.*/i)) {
+                        log('Opened the door!');
+                        await waitForFlag();
+                        await sleep(1500);
+                    } else {
+                        mouse(Math.random()*500,Math.random()*400);
+                    }
+                    await sleep(750);
+                }
+            }
+            
+            if (await clickAlong([x,z], seers_spin_to_seers_bank, true)) {
+                await sleep(750);
+                var booth = chooseRandom(seers_bank_booths);
+                //console.log('Booth', booth);
+                await clickMM(booth[0],booth[1]-1);
+                await sleep(3000);
+                await clickMS(globalToLocal(booth),null,1.0,2);
+                await sleep(500);
+                if (await clickOption(/.*Use-quickly.*/i)) {
+                    for (var _ = 0; _ < 10 && viewportInterfaceID() != 5292; _++) await sleep(500);
+                    if (viewportInterfaceID() != 5292) return;
+                    await depositAll();
+                    await clickMM(myPos());
+                    await sleep(1000);
+                    if (Math.random() < 0.5) {
+                        await runOn();
+                        await sleep(750);
+                    }
+                    await openTab(TAB_INVENTORY);
+                }
+            } else {
+                await sleep(1500);
+            }
+        }
+    } else if (phase == 'BANK_TO_FLAX') {
+        if  (x >= 2737 && z <= 3453) { //pick flax
+            var flax = findObjects(2646, true); //visible
+            if (flax.length == 0) {
+                flax = findObjects(2646, false, null, 45);
+                await walkTowards(chooseClosestPath(flax));
+                await sleep(1500);
+                return;
+            }
+            flax = chooseClosestPath(flax,false,true);
+            if (await clickMS(flax,null,0.1)) {
+                await waitForFlag();
+                for (var _ = 0; _ < 5 && freeSlots() == free; _++) await sleep(250);
+            } else {
+                await sleep(250);
+            }
+        } else {
+            await clickAlong([x,z], seers_bank_to_seers_flax, true);
+            await sleep(1500);
+        }
+    } else if (phase == 'FLAX_TO_SPIN') {
+        if (currentLevel() == 1) {
+            await openTab(TAB_INVENTORY);
+            var comp = invFind(1780);
+            if (comp === null) return;
+            await clickInv(comp);
+            await sleep(500);
+            await clickMS(globalToLocal([2711, 3471]),null,0.5,1);
+            await waitForAnim();
+            for (var _ = 0; _ < 12 && myAnim() == 894; _++) {
+                WATCHDOG = now();
+                await sleep(200);
+            }
+        } else {
+            if (x < 2720) {
+                if (isWallAt(2716, 3472, 1530)) { 
+                    log('Door is closed...');
+                    await clickMM(2717+Math.random()*3-1, 3470+Math.random()*4-2, 1, 0);
+                    await waitForFlag();
+                    await sleep(1500);
+                    await clickMS(globalToLocal(2715.5,3472),null,1.0,2);
+                    await sleep(500);
+                    if (await clickOption(/Open.*/i)) {
+                        log('Opened the door!');
+                        await waitForFlag();
+                        await sleep(1500);
+                    } else {
+                        mouse(Math.random()*500,Math.random()*400);
+                    }
+                    await sleep(750);
+                } else {
+                    await clickMM(2714, 3471);
+                    await waitForFlag();
+                    await sleep(1500);
+                    await clickMS(globalToLocal([2715, 3470]), null, 1.0); //climb
+                    await waitForFlag();
+                    await sleep(2000);
+                }
+            } else {
+                await clickAlong([x,z], seers_flax_to_seers_spin, true);
+                await sleep(1500);
+            }
+        }
+    }
+        
+
+}
+
 var STOP = false;
 var WATCHDOG = now();
 
@@ -3140,7 +3317,8 @@ async function mainLoop() {
         //await airRunecrafter();
         //await mindRunecrafter();
         //await gnomeAgility();
-        await ironAndEssence(storage);
+        //await ironAndEssence(storage);
+        await flaxToString();
     }
 }
 

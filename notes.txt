@@ -33,6 +33,9 @@ Client: class xx
     menuOption[i]: this['fr'] -- easy w/ drawMenu
     levelTileFlags[][][]: this['He'] -- find with levelHeightMap double 0x69, 0x69 in the constructor and assign
     scene: this['Nq']  -- near levelHeightMap and levelTitleFlags
+    messageType: this['fJ'] -- 99 (0x63) in a for loop scrolls these
+    messageSender: this['fS'] --
+    messageText: this['fV'] --
     
 scene: class x9
     levelTiles[][][]: this['rd'] -- in the constructor four arguments, last is null 
