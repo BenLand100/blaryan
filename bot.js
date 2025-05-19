@@ -168,6 +168,18 @@ function minimapYaw() {
     return (cameraYaw() + document.client['vI']) & 2047;
 }
 
+function minimapYawResid(desired) {
+    var yaw = minimapYaw() - desired;
+    if (yaw > 2048) yaw -= 2048
+    if (yaw < -2047) yaw += 2048
+    log(yaw);
+    if (yaw > 0) {
+    
+    } else {
+    
+    }
+}
+
 function project_ms(x, y, z) { //local coords!
 
     let x_off = x - document.client['nw'], y_off = y - document.client['n2'], z_off = z - document.client['no'], sin_pitch = document.sincos_cls['oy'][cameraPitch()], cos_pitch = document.sincos_cls['Y3'][cameraPitch()], sin_yaw = document.sincos_cls['oy'][cameraYaw()], cos_yaw = document.sincos_cls['Y3'][cameraYaw()],
@@ -3177,7 +3189,7 @@ async function flaxToString() {
                 //[2715, 3472] 1531 //opened
                 if (isWallAt(2716, 3472, 1530)) {        
                     await clickMS(globalToLocal(2715.5,3472),null,1.0,2);
-                    await sleep(500);
+                    await sleep(1000);
                     if (await clickOption(/Open.*/i)) {
                         log('Opened the door!');
                         await waitForFlag();
@@ -3264,7 +3276,7 @@ async function flaxToString() {
                     await waitForFlag();
                     await sleep(1500);
                     await clickMS(globalToLocal(2715.5,3472),null,1.0,2);
-                    await sleep(500);
+                    await sleep(1000);
                     if (await clickOption(/Open.*/i)) {
                         log('Opened the door!');
                         await waitForFlag();
