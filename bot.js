@@ -3125,12 +3125,12 @@ var seers_spin_to_seers_bank = [
         [2726, 3492]
     ],
     seers_bank_to_seers_flax = [
-        [2726, 3492],
-        [2726, 3485],
-        [2726, 3478],
-        [2727, 3471],
-        [2727, 3464],
-        [2726, 3457],
+        [2724, 3492],
+        [2724, 3485],
+        [2724, 3478],
+        [2725, 3471],
+        [2725, 3464],
+        [2725, 3457],
         [2729, 3450],
         [2734, 3445],
         [2741, 3443]
@@ -3164,7 +3164,7 @@ async function flaxToString() {
         [x, z] = myPos();
     
     var phase = (free == 0 || currentLevel() == 1) ? (flax > 0 ? 'FLAX_TO_SPIN' : 'SPIN_TO_BANK') : 'BANK_TO_FLAX'
-    log(phase);
+    //log(phase);
     
     if (phase == 'SPIN_TO_BANK') {
         if (currentLevel() == 1) {
@@ -3203,7 +3203,7 @@ async function flaxToString() {
                     await depositAll();
                     await clickMM(myPos());
                     await sleep(1000);
-                    if (Math.random() < 0.5) {
+                    if (Math.random() < 0.75) {
                         await runOn();
                         await sleep(750);
                     }
@@ -3239,18 +3239,28 @@ async function flaxToString() {
             var comp = invFind(1780);
             if (comp === null) return;
             await clickInv(comp);
-            await sleep(500);
-            await clickMS(globalToLocal([2711, 3471]),null,0.5,1);
-            await waitForAnim();
-            for (var _ = 0; _ < 12 && myAnim() == 894; _++) {
-                WATCHDOG = now();
-                await sleep(200);
+            await sleep(750);
+            for (var s = 0; s < 28 && !STOP; s++) {
+                await clickMS(globalToLocal([2711, 3471]),null,0.5,1);
+                await waitForAnim();
+                await sleep(500);
+                comp = invFind(1780);
+                if (comp === null) break;
+                await clickInv(comp);
+                for (var _ = 0; _ < 12 && myAnim() == 894; _++) {
+                    WATCHDOG = now();
+                    await handleLogout();
+                    await handleRandoms();
+                    await sleep(200);
+                }
+                await sleep(500);
             }
         } else {
             if (x < 2720) {
                 if (isWallAt(2716, 3472, 1530)) { 
-                    log('Door is closed...');
-                    await clickMM(2717+Math.random()*3-1, 3470+Math.random()*4-2, 1, 0);
+                    if (! await clickMS(globalToLocal(2716,3472),null,1.0,2)) {
+                        await clickMM(2717+Math.random()*2-1, 3470+Math.random()*2-1, 1, 0);
+                    }
                     await waitForFlag();
                     await sleep(1500);
                     await clickMS(globalToLocal(2715.5,3472),null,1.0,2);
